@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>本棚</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Old+Mincho:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEF1EC; --card:#FBFCFA; --ink:#1E2A44; --muted:#5E6B7E; --rule:#C9D1CB;
+  --red:#B5302A; --amber:#94660A; --grey:#7C8590; --focus:#2D5BD0;
+  --serif:"Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+  --sans:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+  color-scheme:light dark;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#151B27;--card:#1D2533;--ink:#E6E9EF;--muted:#9AA5B5;--rule:#2F3A4C;--red:#E0675F;--amber:#D9A53A;--grey:#8D96A3;--focus:#8AB0FF;}
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.7 var(--sans)}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px 64px}
+header{padding:28px 0 0}
+h1{font:700 40px/1.1 var(--serif);margin:0 0 4px;letter-spacing:.06em}
+.lead{color:var(--muted);margin:0 0 18px;font-size:13px}
+nav{display:flex;gap:4px;border-bottom:2px solid var(--ink)}
+nav button{font:700 15px var(--sans);background:none;border:0;color:var(--muted);padding:10px 16px;cursor:pointer;border-radius:6px 6px 0 0}
+nav button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.btn{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:700}
+.btn:disabled{opacity:.5;cursor:default}
+input[type=text],input[type=search],input[type=password],select,textarea{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:8px 10px}
+section{padding-top:20px}
+.searchbar{display:flex;gap:8px}
+.searchbar input{flex:1;font-size:16px;min-width:0}
+.status{color:var(--muted);font-size:13px;min-height:1.7em;margin:10px 0}
+.notice{background:var(--card);border-left:4px solid var(--red);padding:10px 14px;margin:14px 0;font-size:14px}
+ul.books{list-style:none;margin:0;padding:0}
+.book{display:grid;grid-template-columns:60px 1fr;gap:14px;padding:16px 0;border-bottom:1px solid var(--rule)}
+.cover{width:60px;height:86px;object-fit:cover;background:var(--rule);border-radius:2px}
+.cover.blank{display:flex;align-items:center;justify-content:center;font:700 22px var(--serif);color:var(--muted)}
+.title{font:700 17px/1.45 var(--serif);margin:0}
+.title a{color:inherit;text-decoration:none}
+.title a:hover{text-decoration:underline}
+.meta{color:var(--muted);font-size:13px;margin:2px 0 8px}
+.stamps{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 8px}
+.stamp{display:inline-flex;align-items:baseline;gap:6px;border:2px solid currentColor;border-radius:5px;padding:1px 8px;font:700 14px var(--serif);transform:rotate(-1.5deg)}
+.stamp b{font-size:11px;font-family:var(--sans);border-right:1px solid currentColor;padding-right:6px}
+.stamp.ok{color:var(--red)}
+.stamp.busy{color:var(--amber)}
+.stamp.none,.stamp.pending,.stamp.error,.stamp.unchecked{color:var(--grey);border-style:dashed;transform:none}
+.stamp.pending{animation:blink 1.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.stamp.pending{animation:none}}
+@keyframes blink{50%{opacity:.4}}
+.branches{font-size:12px;color:var(--muted);margin:-2px 0 8px}
+.branches a{color:inherit}
+.actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.memo{width:100%;margin-top:8px;min-height:2.6em;resize:vertical;font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.chip{border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:4px 12px;cursor:pointer;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.filters input{flex:1;min-width:140px}
+.empty{color:var(--muted);padding:28px 0;text-align:center}
+.field{margin:0 0 22px}
+.field label{display:block;font-weight:700;margin-bottom:6px}
+.field .help{color:var(--muted);font-size:13px;margin:4px 0 0}
+.sysrow{display:grid;grid-template-columns:90px 1fr auto;gap:8px;margin-bottom:8px}
+.libresult{border-bottom:1px solid var(--rule);padding:8px 0;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+h2{font:700 20px var(--serif);margin:26px 0 10px}
+h3{font:700 16px var(--serif);margin:20px 0 4px}
+dialog{border:0;border-radius:8px;padding:0;max-width:720px;width:calc(100% - 24px);max-height:85vh;background:var(--paper);color:var(--ink)}
+dialog::backdrop{background:rgba(10,15,25,.55)}
+.dlg-head{position:sticky;top:0;background:var(--paper);display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:2px solid var(--ink);z-index:1}
+.dlg-head h2{margin:0;font-size:17px}
+.dlg-body{padding:0 18px 18px}
+details{margin-top:14px}
+summary{cursor:pointer;color:var(--muted);font-size:13px}
+footer{color:var(--muted);font-size:12px;margin-top:40px}
+footer a{color:inherit}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>本棚</h1>
+  <p class="lead">東大と坂戸の図書館を一度に調べて、読みたい本を並べておく場所</p>
+  <nav role="tablist">
+    <button role="tab" data-tab="search" aria-selected="true">探す</button>
+    <button role="tab" data-tab="shelf" aria-selected="false">本棚</button>
+    <button role="tab" data-tab="settings" aria-selected="false">設定</button>
+  </nav>
+</header>
+
+<main>
+<section id="view-search">
+  <div id="key-notice" class="notice" hidden>蔵書を確認するには、カーリルのアプリケーションキーが必要です。<button class="btn" data-goto="settings">設定を開く</button></div>
+  <form id="search-form" class="searchbar">
+    <input id="q" type="search" placeholder="書名・著者名・キーワード・ISBN" autocomplete="off" required>
+    <button class="btn primary" type="submit">検索</button>
+  </form>
+  <div id="search-status" class="status" aria-live="polite"></div>
+  <ul id="search-results" class="books"></ul>
+  <details id="noisbn-box" hidden><summary></summary><ul id="noisbn-list" class="books"></ul></details>
+</section>
+
+<section id="view-shelf" hidden>
+  <div class="filters">
+    <button class="chip" data-filter="all" aria-pressed="true">すべて</button>
+    <button class="chip" data-filter="want" aria-pressed="false">読みたい</button>
+    <button class="chip" data-filter="reading" aria-pressed="false">読んでる</button>
+    <button class="chip" data-filter="done" aria-pressed="false">読んだ</button>
+  </div>
+  <div class="filters">
+    <input id="shelf-q" type="search" placeholder="本棚の中を絞り込む">
+    <button id="recheck-all" class="btn">蔵書をまとめて更新</button>
+  </div>
+  <div id="shelf-status" class="status" aria-live="polite"></div>
+  <ul id="shelf-list" class="books"></ul>
+</section>
+
+<section id="view-settings" hidden>
+  <div class="field">
+    <label for="appkey">カーリルのアプリケーションキー</label>
+    <input id="appkey" type="password" style="width:100%" autocomplete="off">
+    <p class="help"><a href="https://calil.jp/api/dashboard/" target="_blank" rel="noopener">カーリルのAPIダッシュボード</a>で発行したキーを貼ってください。このブラウザにだけ保存されます。</p>
+  </div>
+
+  <div class="field">
+    <label>調べる図書館</label>
+    <div id="systems"></div>
+    <button id="add-system" class="btn">図書館を追加</button>
+    <p class="help">左が表示名、右がカーリルのシステムIDです。</p>
+  </div>
+
+  <div class="field">
+    <label>システムIDを調べる</label>
+    <div class="searchbar">
+      <input id="lib-pref" type="text" value="埼玉県" style="flex:0 0 7em">
+      <input id="lib-city" type="text" value="坂戸市">
+      <button id="lib-lookup" class="btn">調べる</button>
+    </div>
+    <div id="lib-results"></div>
+  </div>
+
+  <div class="field">
+    <label>本棚のバックアップ</label>
+    <div class="actions">
+      <button id="export" class="btn">書き出す(JSON)</button>
+      <label class="btn" style="font-weight:400;margin:0">読み込む<input id="import" type="file" accept="application/json" hidden></label>
+    </div>
+    <p class="help">本棚はこのブラウザの中に保存されています。別の端末に移すときや、念のための控えに使ってください。読み込むと、同じ本は読み込んだ内容で上書きされます。</p>
+  </div>
+</section>
+</main>
+
+<footer>蔵書情報:<a href="https://calil.jp/" target="_blank" rel="noopener">カーリル</a> / 書誌情報:<a href="https://ndlsearch.ndl.go.jp/" target="_blank" rel="noopener">国立国会図書館サーチ</a>、Google Books</footer>
+</div>
+
+<dialog id="similar-dlg">
+  <div class="dlg-head"><h2 id="similar-title">似た本</h2><button class="btn" id="similar-close">閉じる</button></div>
+  <div class="dlg-body" id="similar-body"></div>
+</dialog>
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+
+/* ---------- 保存まわり ---------- */
+const STORE_KEY = 'hondana:v1';
+const DEFAULT_STATE = {
+  settings: { appkey: '', systems: [ {id:'Univ_Tokyo', label:'東大'}, {id:'Saitama_Sakado', label:'坂戸'} ] },
+  books: {}
+};
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return structuredClone(DEFAULT_STATE);
+    const s = JSON.parse(raw);
+    return { settings: {...structuredClone(DEFAULT_STATE.settings), ...(s.settings||{})}, books: s.books || {} };
+  }catch(e){ return structuredClone(DEFAULT_STATE); }
+}
+let state = loadState();
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch(e){ toast('保存できませんでした: ' + e.message); }
+}
+
+/* ---------- 小物 ---------- */
+const $ = s => document.querySelector(s);
+const enc = encodeURIComponent;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function chunks(arr, n){ const out=[]; for(let i=0;i<arr.length;i+=n) out.push(arr.slice(i,i+n)); return out; }
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function cleanIsbn(s){ return String(s||'').replace(/[^0-9Xx]/g,'').toUpperCase(); }
+function toIsbn13(s){
+  s = cleanIsbn(s);
+  if(s.length === 13) return s;
+  if(s.length !== 10) return null;
+  const core = '978' + s.slice(0,9);
+  let sum = 0;
+  for(let i=0;i<12;i++) sum += Number(core[i]) * (i%2===0 ? 1 : 3);
+  return core + ((10 - sum % 10) % 10);
+}
+function cleanAuthor(a){
+  let s = String(a||'').trim()
+    .replace(/[,，]\s*\d{3,4}-?\d{0,4}$/, '')
+    .replace(/\s*(著|訳|編|編著|監修|作|文|絵|原作|著者)$/, '');
+  if(/[\u3040-\u30ff\u4e00-\u9fff]/.test(s)) s = s.replace(/[,，]\s*/g, '');
+  return s.trim();
+}
+
+/* JSONP(カーリルはこの方式で呼ぶ) */
+let jsonpSeq = 0;
+function jsonp(url, timeoutMs = 20000){
+  return new Promise((resolve, reject) => {
+    const name = '__calil' + (++jsonpSeq);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => { cleanup(); reject(new Error('カーリルから応答がありません')); }, timeoutMs);
+    function cleanup(){ clearTimeout(timer); delete window[name]; script.remove(); }
+    window[name] = data => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('カーリルに接続できませんでした(キーを確認してください)')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + name;
+    document.head.appendChild(script);
+  });
+}
+
+/* ---------- 書誌検索 ---------- */
+async function searchNdl(params){
+  const qs = Object.entries(params).map(([k,v]) => `${k}=${enc(v)}`).join('&');
+  const res = await fetch(`https://ndlsearch.ndl.go.jp/api/opensearch?${qs}`);
+  if(!res.ok) throw new Error('NDLサーチ: ' + res.status);
+  const doc = new DOMParser().parseFromString(await res.text(), 'application/xml');
+  return [...doc.getElementsByTagName('item')].map(item => {
+    const all = tag => [...item.getElementsByTagName(tag)];
+    const txt = tag => (all(tag)[0]?.textContent || '').trim();
+    const isbnEl = all('dc:identifier').find(e => /ISBN/i.test(e.getAttribute('xsi:type') || ''));
+    const ndcEl  = all('dc:subject').find(e => /NDC/i.test(e.getAttribute('xsi:type') || ''));
+    let authors = all('dc:creator').map(e => cleanAuthor(e.textContent)).filter(Boolean);
+    if(!authors.length && txt('author')) authors = txt('author').split(/\s*,\s*/).map(cleanAuthor).filter(Boolean);
+    return {
+      isbn: isbnEl ? toIsbn13(isbnEl.textContent) : null,
+      title: txt('title'),
+      authors,
+      publisher: txt('dc:publisher'),
+      year: (txt('dcterms:issued') || txt('dc:date')).replace(/\D/g,'').slice(0,4),
+      ndc: ndcEl ? ndcEl.textContent.trim() : '',
+      cover: '',
+      link: txt('link')
+    };
+  });
+}
+
+async function searchGoogle(q){
+  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${enc(q)}&maxResults=20&printType=books`);
+  if(!res.ok) throw new Error('Google Books: ' + res.status);
+  const j = await res.json();
+  return (j.items || []).map(it => {
+    const v = it.volumeInfo || {};
+    const ids = v.industryIdentifiers || [];
+    const i13 = ids.find(x => x.type === 'ISBN_13')?.identifier;
+    const i10 = ids.find(x => x.type === 'ISBN_10')?.identifier;
+    return {
+      isbn: toIsbn13(i13 || i10 || ''),
+      title: [v.title, v.subtitle].filter(Boolean).join(' '),
+      authors: (v.authors || []).map(cleanAuthor),
+      publisher: v.publisher || '',
+      year: (v.publishedDate || '').slice(0,4),
+      ndc: '',
+      cover: (v.imageLinks?.thumbnail || '').replace(/^http:/, 'https:'),
+      link: v.infoLink || ''
+    };
+  });
+}
+
+function mergeBooks(lists){
+  const map = new Map(); const noIsbn = [];
+  for(const list of lists) for(const b of list){
+    if(!b.title) continue;
+    if(!b.isbn){ noIsbn.push(b); continue; }
+    const prev = map.get(b.isbn);
+    if(!prev){ map.set(b.isbn, {...b}); continue; }
+    for(const k of ['title','publisher','year','ndc','cover','link']) if(!prev[k] && b[k]) prev[k] = b[k];
+    if(!prev.authors.length) prev.authors = b.authors;
+  }
+  return { withIsbn: [...map.values()], noIsbn };
+}
+
+/* ---------- 蔵書確認(カーリル) ---------- */
+const availCache = new Map();   // isbn -> {systemid: info}
+const seenBooks = new Map();    // isbn -> book(画面に出した本)
+
+async function checkAvailability(isbns, onUpdate){
+  const { appkey, systems } = state.settings;
+  if(!appkey) throw new Error('設定でカーリルのアプリケーションキーを入力してください');
+  const ids = systems.map(s => s.id.trim()).filter(Boolean);
+  if(!ids.length) throw new Error('設定で図書館を1つ以上登録してください');
+  const base = `https://api.calil.jp/check?appkey=${enc(appkey)}`;
+  for(const chunk of chunks([...new Set(isbns)], 20)){
+    let data = await jsonp(`${base}&isbn=${chunk.join(',')}&systemid=${ids.map(enc).join(',')}`);
+    let guard = 0;
+    while(true){
+      if(data.books) for(const [isbn, info] of Object.entries(data.books)) availCache.set(isbn, info);
+      onUpdate?.(Object.keys(data.books || {}));
+      if(data.continue !== 1 || guard++ > 30) break;
+      await sleep(2000);
+      data = await jsonp(`${base}&session=${enc(data.session)}`);
+    }
+  }
+}
+
+const OK_WORDS = ['貸出可','蔵書あり','館内のみ'];
+const BUSY_WORDS = ['貸出中','予約中','準備中'];
+function summarize(info){
+  if(!info) return { cls:'unchecked', text:'未確認' };
+  if(info.status === 'Error') return { cls:'error', text:'エラー' };
+  const vals = Object.values(info.libkey || {});
+  if(info.status === 'Running' && !vals.length) return { cls:'pending', text:'確認中' };
+  if(!vals.length) return { cls:'none', text:'なし' };
+  const ok = OK_WORDS.find(w => vals.includes(w));
+  if(ok) return { cls:'ok', text: ok };
+  if(vals.some(v => BUSY_WORDS.includes(v))) return { cls:'busy', text:'貸出中' };
+  return { cls:'none', text: vals[0] };
+}
+function availOf(isbn){ return availCache.get(isbn) || state.books[isbn]?.avail || null; }
+
+function stampsHtml(isbn, pending){
+  const avail = availOf(isbn);
+  const stamps = []; const branches = [];
+  for(const sys of state.settings.systems){
+    let s = summarize(avail?.[sys.id]);
+    if(pending && s.cls === 'unchecked') s = { cls:'pending', text:'確認中' };
+    stamps.push(`<span class="stamp ${s.cls}"><b>${esc(sys.label || sys.id)}</b>${esc(s.text)}</span>`);
+    const info = avail?.[sys.id];
+    const lk = Object.entries(info?.libkey || {});
+    if(lk.length){
+      const list = lk.map(([lib, st]) => `${esc(lib)}(${esc(st)})`).join('、');
+      const more = info.reserveurl ? ` <a href="${esc(info.reserveurl)}" target="_blank" rel="noopener">詳細</a>` : '';
+      branches.push(`${esc(sys.label || sys.id)}:${list}${more}`);
+    }
+  }
+  return `<div class="stamps">${stamps.join('')}</div>` + (branches.length ? `<div class="branches">${branches.join('<br>')}</div>` : '');
+}
+function refreshStamps(isbns){
+  for(const isbn of isbns){
+    document.querySelectorAll(`[data-stamps="${CSS.escape(isbn)}"]`).forEach(el => { el.innerHTML = stampsHtml(isbn, false); });
+  }
+}
+
+/* ---------- 本のカード ---------- */
+const STATUS_LABEL = { want:'読みたい', reading:'読んでる', done:'読んだ' };
+
+function coverHtml(b){
+  const first = (b.title || '?').trim().charAt(0);
+  const fallback = b.cover ? esc(b.cover) : '';
+  if(!b.isbn && !b.cover) return `<div class="cover blank" aria-hidden="true">${esc(first)}</div>`;
+  const src = b.isbn ? `https://ndlsearch.ndl.go.jp/thumbnail/${b.isbn}.jpg` : fallback;
+  return `<img class="cover" alt="" loading="lazy" src="${src}" data-fallback="${fallback}" data-initial="${esc(first)}">`;
+}
+document.addEventListener('error', e => {
+  const img = e.target;
+  if(!(img instanceof HTMLImageElement) || !img.classList.contains('cover')) return;
+  const fb = img.dataset.fallback;
+  if(fb && img.src !== fb){ img.src = fb; img.dataset.fallback = ''; return; }
+  const div = document.createElement('div');
+  div.className = 'cover blank'; div.setAttribute('aria-hidden','true'); div.textContent = img.dataset.initial || '?';
+  img.replaceWith(div);
+}, true);
+
+function bookHtml(b, mode, pending){
+  if(b.isbn) seenBooks.set(b.isbn, b);
+  const meta = [b.authors?.join('、'), b.publisher, b.year].filter(Boolean).map(esc).join(' / ');
+  const title = b.link ? `<a href="${esc(b.link)}" target="_blank" rel="noopener">${esc(b.title)}</a>` : esc(b.title);
+  let actions = '';
+  if(!b.isbn){
+    actions = `<span class="meta">ISBNがないため蔵書を自動で確認できません</span>`;
+  } else if(mode === 'shelf'){
+    const sb = state.books[b.isbn];
+    const opts = Object.entries(STATUS_LABEL).map(([v,l]) => `<option value="${v}"${sb.status===v?' selected':''}>${l}</option>`).join('');
+    const checked = sb.availAt ? `<span class="meta" style="margin:0">確認 ${new Date(sb.availAt).toLocaleDateString('ja-JP')}</span>` : '';
+    actions = `<select data-action="status" data-isbn="${b.isbn}" aria-label="読書の状態">${opts}</select>
+      <button class="btn" data-action="recheck" data-isbn="${b.isbn}">蔵書を確認</button>
+      <button class="btn" data-action="similar" data-isbn="${b.isbn}">似た本</button>
+      <button class="btn" data-action="remove" data-isbn="${b.isbn}">外す</button> ${checked}
+      <textarea class="memo" data-action="memo" data-isbn="${b.isbn}" placeholder="メモ(どこで知ったか、なぜ読みたいか など)">${esc(sb.memo || '')}</textarea>`;
+  } else {
+    const inShelf = !!state.books[b.isbn];
+    actions = `<button class="btn ${inShelf?'':'primary'}" data-action="add" data-isbn="${b.isbn}"${inShelf?' disabled':''}>${inShelf?'本棚にあります':'本棚に入れる'}</button>
+      <button class="btn" data-action="similar" data-isbn="${b.isbn}">似た本</button>`;
+  }
+  return `<li class="book">${coverHtml(b)}<div>
+    <p class="title">${title}</p>
+    <p class="meta">${meta || '&nbsp;'}</p>
+    ${b.isbn ? `<div data-stamps="${b.isbn}">${stampsHtml(b.isbn, pending)}</div>` : ''}
+    <div class="actions">${actions}</div></div></li>`;
+}
+
+/* ---------- 探す ---------- */
+let searchSeq = 0;
+$('#search-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('#q').value.trim(); if(!q) return;
+  const my = ++searchSeq;
+  const status = $('#search-status');
+  status.textContent = '検索しています…';
+  $('#search-results').innerHTML = ''; $('#noisbn-box').hidden = true;
+
+  const isbn = toIsbn13(q);
+  const ndlParams = isbn ? { isbn, cnt: 20 } : { any: q, cnt: 30 };
+  const [ndl, google] = await Promise.allSettled([ searchNdl(ndlParams), searchGoogle(isbn ? 'isbn:' + isbn : q) ]);
+  if(my !== searchSeq) return;
+  const failed = [];
+  if(ndl.status === 'rejected'){ failed.push('NDLサーチ'); console.warn(ndl.reason); }
+  if(google.status === 'rejected'){ failed.push('Google Books'); console.warn(google.reason); }
+  const { withIsbn, noIsbn } = mergeBooks([ ndl.value || [], google.value || [] ]);
+  const failNote = failed.length ? `(${failed.join('・')}に接続できなかったため、残りの結果だけ表示しています)` : '';
+
+  if(!withIsbn.length && !noIsbn.length){ status.textContent = '見つかりませんでした。言葉を変えて試してください。' + failNote; return; }
+  const canCheck = !!state.settings.appkey;
+  $('#search-results').innerHTML = withIsbn.map(b => bookHtml(b, 'search', canCheck)).join('');
+  if(noIsbn.length){
+    $('#noisbn-box').hidden = false;
+    $('#noisbn-box summary').textContent = `ISBNのない本 ${noIsbn.length}件(古い本など)`;
+    $('#noisbn-list').innerHTML = noIsbn.map(b => bookHtml(b, 'search', false)).join('');
+  }
+  status.textContent = `${withIsbn.length}件。` + (canCheck ? '蔵書を確認しています…' : '') + failNote;
+  if(!canCheck || !withIsbn.length) return;
+  try{
+    await checkAvailability(withIsbn.map(b => b.isbn), refreshStamps);
+    if(my === searchSeq) status.textContent = `${withIsbn.length}件。蔵書の確認が終わりました。` + failNote;
+  }catch(err){
+    if(my === searchSeq) status.textContent = err.message;
+    refreshStamps(withIsbn.map(b => b.isbn));
+  }
+});
+
+/* ---------- 本棚 ---------- */
+let shelfFilter = 'all';
+function renderShelf(){
+  const q = $('#shelf-q').value.trim().toLowerCase();
+  const list = Object.values(state.books)
+    .filter(b => shelfFilter === 'all' || b.status === shelfFilter)
+    .filter(b => !q || [b.title, ...(b.authors||[]), b.publisher, b.memo].join(' ').toLowerCase().includes(q))
+    .sort((a,b) => (b.addedAt||0) - (a.addedAt||0));
+  const total = Object.keys(state.books).length;
+  $('#shelf-list').innerHTML = list.length ? list.map(b => bookHtml(b, 'shelf', false)).join('')
+    : `<li class="empty">${total ? '条件に合う本はありません。' : '本棚はまだ空です。「探す」で見つけた本を入れてください。'}</li>`;
+}
+document.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => {
+  shelfFilter = btn.dataset.filter;
+  document.querySelectorAll('[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  renderShelf();
+}));
+$('#shelf-q').addEventListener('input', renderShelf);
+
+async function recheck(isbns, statusEl){
+  isbns.forEach(i => availCache.delete(i));
+  isbns.forEach(i => document.querySelectorAll(`[data-stamps="${i}"]`).forEach(el => el.innerHTML = stampsHtml(i, true)));
+  try{
+    await checkAvailability(isbns, refreshStamps);
+    const now = Date.now();
+    for(const i of isbns) if(state.books[i] && availCache.has(i)){ state.books[i].avail = availCache.get(i); state.books[i].availAt = now; }
+    save();
+    if(statusEl) statusEl.textContent = '蔵書の確認が終わりました。';
+  }catch(err){
+    if(statusEl) statusEl.textContent = err.message; else toast(err.message);
+    refreshStamps(isbns);
+  }
+}
+$('#recheck-all').addEventListener('click', async () => {
+  const isbns = Object.keys(state.books);
+  if(!isbns.length) return;
+  const btn = $('#recheck-all'); btn.disabled = true;
+  $('#shelf-status').textContent = `${isbns.length}冊を確認しています…`;
+  await recheck(isbns, $('#shelf-status'));
+  btn.disabled = false; renderShelf();
+});
+
+/* ---------- カード上の操作(まとめて受ける) ---------- */
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-action]'); if(!el || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') return;
+  const isbn = el.dataset.isbn; const action = el.dataset.action;
+  if(action === 'add'){
+    const b = seenBooks.get(isbn); if(!b) return;
+    state.books[isbn] = { ...b, status:'want', memo:'', addedAt: Date.now(),
+      avail: availCache.get(isbn) || null, availAt: availCache.has(isbn) ? Date.now() : null };
+    save();
+    document.querySelectorAll(`[data-action="add"][data-isbn="${isbn}"]`).forEach(x => { x.disabled = true; x.textContent = '本棚にあります'; x.classList.remove('primary'); });
+    toast('本棚に入れました');
+  } else if(action === 'remove'){
+    if(!confirm(`「${state.books[isbn]?.title}」を本棚から外しますか？`)) return;
+    delete state.books[isbn]; save(); renderShelf(); toast('本棚から外しました');
+  } else if(action === 'recheck'){
+    el.disabled = true; await recheck([isbn]); renderShelf();
+  } else if(action === 'similar'){
+    openSimilar(state.books[isbn] || seenBooks.get(isbn));
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target; const isbn = el.dataset?.isbn;
+  if(!isbn || !state.books[isbn]) return;
+  if(el.dataset.action === 'status'){ state.books[isbn].status = el.value; save(); if(shelfFilter !== 'all') renderShelf(); }
+  if(el.dataset.action === 'memo'){ state.books[isbn].memo = el.value; save(); toast('メモを保存しました'); }
+});
+
+/* ---------- 似た本 ---------- */
+async function openSimilar(book){
+  if(!book) return;
+  const dlg = $('#similar-dlg'); const body = $('#similar-body');
+  $('#similar-title').textContent = `「${book.title}」に似た本`;
+  body.innerHTML = '<p class="status">探しています…</p>';
+  dlg.showModal();
+
+  let ndc = book.ndc;
+  if(!ndc && book.isbn){
+    try{ ndc = (await searchNdl({ isbn: book.isbn, cnt: 5 })).find(x => x.ndc)?.ndc || ''; }catch(e){}
+    if(ndc && state.books[book.isbn]){ state.books[book.isbn].ndc = ndc; save(); }
+  }
+  const author = book.authors?.[0] || '';
+  const exclude = new Set([book.isbn]);
+  const pick = (list, n) => {
+    const out = [];
+    for(const b of mergeBooks([list]).withIsbn){ if(exclude.has(b.isbn)) continue; exclude.add(b.isbn); out.push(b); if(out.length >= n) break; }
+    return out;
+  };
+  const [byAuthorNdl, byAuthorG, byNdc] = await Promise.allSettled([
+    author ? searchNdl({ creator: author, cnt: 30 }) : Promise.resolve([]),
+    author ? searchGoogle('inauthor:"' + author + '"') : Promise.resolve([]),
+    ndc ? searchNdl({ ndc, cnt: 50 }) : Promise.resolve([])
+  ]);
+  const sameAuthor = pick([...(byAuthorNdl.value||[]), ...(byAuthorG.value||[])], 12);
+  const sameNdc = pick(byNdc.value || [], 15);
+  const canCheck = !!state.settings.appkey;
+  let html = '';
+  if(author) html += `<h3>${esc(author)}の他の本</h3>` + (sameAuthor.length ? `<ul class="books">${sameAuthor.map(b => bookHtml(b,'search',canCheck)).join('')}</ul>` : '<p class="meta">見つかりませんでした。</p>');
+  if(ndc) html += `<h3>同じ分類の本(NDC ${esc(ndc)})</h3>` + (sameNdc.length ? `<ul class="books">${sameNdc.map(b => bookHtml(b,'search',canCheck)).join('')}</ul>` : '<p class="meta">見つかりませんでした。</p>');
+  else html += '<p class="meta">この本の分類番号が見つからなかったため、分類からは探せませんでした。</p>';
+  body.innerHTML = html;
+  const isbns = [...sameAuthor, ...sameNdc].map(b => b.isbn);
+  if(canCheck && isbns.length){ try{ await checkAvailability(isbns, refreshStamps); }catch(err){ toast(err.message); refreshStamps(isbns); } }
+}
+$('#similar-close').addEventListener('click', () => $('#similar-dlg').close());
+$('#similar-dlg').addEventListener('close', () => { if(!$('#view-shelf').hidden) renderShelf(); });
+
+/* ---------- 設定 ---------- */
+function renderSettings(){
+  $('#appkey').value = state.settings.appkey;
+  $('#systems').innerHTML = state.settings.systems.map((s,i) => `<div class="sysrow">
+    <input type="text" data-sys="${i}" data-field="label" value="${esc(s.label)}" aria-label="表示名">
+    <input type="text" data-sys="${i}" data-field="id" value="${esc(s.id)}" aria-label="システムID">
+    <button class="btn" data-sysdel="${i}">削除</button></div>`).join('');
+  $('#key-notice').hidden = !!state.settings.appkey;
+}
+$('#appkey').addEventListener('change', e => { state.settings.appkey = e.target.value.trim(); save(); renderSettings(); toast('キーを保存しました'); });
+$('#systems').addEventListener('change', e => {
+  const i = e.target.dataset.sys; if(i === undefined) return;
+  state.settings.systems[i][e.target.dataset.field] = e.target.value.trim(); save(); availCache.clear();
+});
+$('#systems').addEventListener('click', e => {
+  const i = e.target.dataset.sysdel; if(i === undefined) return;
+  state.settings.systems.splice(Number(i), 1); save(); renderSettings();
+});
+$('#add-system').addEventListener('click', () => { state.settings.systems.push({ id:'', label:'' }); save(); renderSettings(); });
+
+$('#lib-lookup').addEventListener('click', async () => {
+  const out = $('#lib-results');
+  if(!state.settings.appkey){ out.innerHTML = '<p class="status">先にアプリケーションキーを入力してください。</p>'; return; }
+  out.innerHTML = '<p class="status">調べています…</p>';
+  try{
+    const pref = $('#lib-pref').value.trim(), city = $('#lib-city').value.trim();
+    const libs = await jsonp(`https://api.calil.jp/library?appkey=${enc(state.settings.appkey)}&pref=${enc(pref)}${city ? '&city=' + enc(city) : ''}&format=json`);
+    const systems = new Map();
+    for(const l of (Array.isArray(libs) ? libs : [])){
+      if(!systems.has(l.systemid)) systems.set(l.systemid, { name: l.systemname, libs: [] });
+      systems.get(l.systemid).libs.push(l.short || l.formal);
+    }
+    if(!systems.size){ out.innerHTML = '<p class="status">見つかりませんでした。都道府県名と市区町村名を確かめてください。</p>'; return; }
+    out.innerHTML = [...systems].map(([id, s]) => `<div class="libresult"><div><strong>${esc(s.name)}</strong>(${esc(id)})<br><span class="meta">${esc(s.libs.slice(0,6).join('、'))}${s.libs.length>6?' ほか':''}</span></div>
+      <button class="btn" data-useid="${esc(id)}" data-usename="${esc(s.name)}">これを使う</button></div>`).join('');
+  }catch(err){ out.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
+});
+$('#lib-results').addEventListener('click', e => {
+  const id = e.target.dataset.useid; if(!id) return;
+  if(state.settings.systems.some(s => s.id === id)){ toast('もう登録されています'); return; }
+  const label = prompt('表示名(短く)', e.target.dataset.usename.replace(/[市町村区]?立?図書館$/,'')) || id;
+  state.settings.systems.push({ id, label }); save(); availCache.clear(); renderSettings(); toast('図書館を追加しました');
+});
+
+$('#export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({ books: state.books, settings: { systems: state.settings.systems } }, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `hondana-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$('#import').addEventListener('change', async e => {
+  const file = e.target.files[0]; if(!file) return;
+  try{
+    const data = JSON.parse(await file.text());
+    const n = Object.keys(data.books || {}).length;
+    if(!confirm(`${n}冊を読み込みます。よろしいですか？`)) return;
+    Object.assign(state.books, data.books || {});
+    if(Array.isArray(data.settings?.systems) && data.settings.systems.length) state.settings.systems = data.settings.systems;
+    save(); renderSettings(); toast(`${n}冊を読み込みました`);
+  }catch(err){ toast('読み込めませんでした: ' + err.message); }
+  e.target.value = '';
+});
+
+/* ---------- タブ ---------- */
+function showTab(name){
+  document.querySelectorAll('nav [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  for(const v of ['search','shelf','settings']) $('#view-' + v).hidden = v !== name;
+  if(name === 'shelf') renderShelf();
+  if(name === 'settings') renderSettings();
+}
+document.querySelectorAll('nav [data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+document.addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if(g) showTab(g.dataset.goto); });
+
+renderSettings();
+</script>
+</body>
+</html>
