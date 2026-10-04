@@ -41,6 +41,14 @@ input[type=text],input[type=search],input[type=password],select,textarea{backgro
 section{padding-top:20px}
 .searchbar{display:flex;gap:8px}
 .searchbar input{flex:1;font-size:16px;min-width:0}
+.adv{margin-top:10px}
+.advgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:10px}
+.advgrid label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.advgrid input{width:100%;color:var(--ink)}
+.yr{display:flex;align-items:center;gap:6px}
+.yr input{min-width:0}
+.help-s{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:10px 0 0}
+@media (max-width:520px){.advgrid{grid-template-columns:1fr}}
 .status{color:var(--muted);font-size:13px;min-height:1.7em;margin:10px 0}
 .notice{background:var(--card);border-left:4px solid var(--red);padding:10px 14px;margin:14px 0;font-size:14px}
 ul.books{list-style:none;margin:0;padding:0}
@@ -105,9 +113,21 @@ footer a{color:inherit}
 <main>
 <section id="view-search">
   <div id="key-notice" class="notice" hidden>蔵書を確認するには、カーリルのアプリケーションキーが必要です。<button class="btn" data-goto="settings">設定を開く</button></div>
-  <form id="search-form" class="searchbar">
-    <input id="q" type="search" placeholder="書名・著者名・キーワード・ISBN" autocomplete="off" required>
-    <button class="btn primary" type="submit">検索</button>
+  <form id="search-form">
+    <div class="searchbar">
+      <input id="q" type="search" placeholder="フリーワード(書名・著者・ISBNなど)" autocomplete="off">
+      <button class="btn primary" type="submit">検索</button>
+    </div>
+    <details id="adv" class="adv">
+      <summary>項目を指定して検索</summary>
+      <div class="advgrid">
+        <label>書名<input id="f-title" type="search" autocomplete="off"></label>
+        <label>著者名<input id="f-creator" type="search" autocomplete="off"></label>
+        <label>出版社<input id="f-publisher" type="search" autocomplete="off"></label>
+        <label>出版年<span class="yr"><input id="f-from" type="text" inputmode="numeric" placeholder="1990" aria-label="出版年(から)"><span>〜</span><input id="f-until" type="text" inputmode="numeric" placeholder="2026" aria-label="出版年(まで)"></span></label>
+      </div>
+      <p class="help-s">入れた項目はすべて満たす本を探します。フリーワードと組み合わせることもできます。<button type="button" id="adv-clear" class="btn">項目を消す</button></p>
+    </details>
   </form>
   <div id="search-status" class="status" aria-live="polite"></div>
   <ul id="search-results" class="books"></ul>
@@ -271,6 +291,15 @@ async function searchNdl(params){
       link: txt('link')
     };
   });
+}
+
+/* 雑誌記事を除いて「図書」だけに絞る。絞り込みが効かないときは全体で検索し直す */
+async function searchNdlBooks(params){
+  try{
+    const r = await searchNdl({ dpid: 'book', ...params });
+    if(r.length) return r;
+  }catch(e){ console.warn('dpid=book で失敗、全体で再検索', e); }
+  return searchNdl(params);
 }
 
 async function searchGoogle(q){
@@ -450,30 +479,65 @@ function bookHtml(b, mode, pending){
 
 /* ---------- 探す ---------- */
 let searchSeq = 0;
+function readQuery(){
+  const v = id => $(id).value.trim();
+  const yr = id => v(id).normalize('NFKC').replace(/\D/g,'').slice(0,4);
+  return { any: v('#q'), title: v('#f-title'), creator: v('#f-creator'), publisher: v('#f-publisher'), from: yr('#f-from'), until: yr('#f-until') };
+}
+$('#adv-clear').addEventListener('click', () => { ['#f-title','#f-creator','#f-publisher','#f-from','#f-until'].forEach(id => $(id).value = ''); });
+
 $('#search-form').addEventListener('submit', async e => {
   e.preventDefault();
-  const q = $('#q').value.trim(); if(!q) return;
-  const my = ++searchSeq;
+  const f = readQuery();
   const status = $('#search-status');
+  if(!Object.values(f).some(Boolean)){ status.textContent = 'フリーワードか、どれか一つの項目を入れてください。'; return; }
+  const my = ++searchSeq;
   status.textContent = '検索しています…';
   $('#search-results').innerHTML = ''; $('#noisbn-box').hidden = true;
 
-  const isbn = toIsbn13(q);
-  const [ndlTitle, ndlAny, google] = await Promise.allSettled(isbn
-    ? [ searchNdl({ isbn, cnt: 20 }), Promise.resolve([]), searchGoogle('isbn:' + isbn) ]
-    : [ searchNdl({ title: q, cnt: 50 }), searchNdl({ any: q, cnt: 30 }), searchGoogle(q) ]);
+  const onlyAny = !f.title && !f.creator && !f.publisher && !f.from && !f.until;
+  const isbn = onlyAny ? toIsbn13(f.any) : null;
+
+  // 国会図書館への問い合わせ
+  const fields = {};
+  for(const k of ['title','creator','publisher','from','until']) if(f[k]) fields[k] = f[k];
+  const ndlCalls = [];
+  if(isbn){
+    ndlCalls.push(searchNdl({ isbn, cnt: 20 }));
+  } else if(f.any){
+    if(!f.title) ndlCalls.push(searchNdlBooks({ ...fields, title: f.any, cnt: 100 }));  // フリーワードを書名として
+    ndlCalls.push(searchNdlBooks({ ...fields, any: f.any, cnt: 50 }));                 // フリーワードを全項目で
+  } else {
+    ndlCalls.push(searchNdlBooks({ ...fields, cnt: 100 }));
+  }
+
+  // Google Booksへの問い合わせ
+  const quote = x => `"${x.replace(/"/g,'')}"`;
+  const gq = isbn ? 'isbn:' + isbn : [f.any, f.title && 'intitle:' + quote(f.title), f.creator && 'inauthor:' + quote(f.creator), f.publisher && 'inpublisher:' + quote(f.publisher)].filter(Boolean).join(' ');
+  const googleCall = gq ? searchGoogle(gq) : Promise.resolve([]);
+
+  const results = await Promise.allSettled([ ...ndlCalls, googleCall ]);
   if(my !== searchSeq) return;
+  const ndlRes = results.slice(0, -1), gRes = results[results.length - 1];
   const failed = [];
-  if(ndlTitle.status === 'rejected' && ndlAny.status === 'rejected'){ failed.push('NDLサーチ'); console.warn(ndlTitle.reason); }
-  if(google.status === 'rejected'){ failed.push('Google Books'); console.warn(google.reason); }
-  const merged = mergeBooks([ ndlTitle.value || [], google.value || [], ndlAny.value || [] ]);
-  const rank = b => titleScore(b.title, q);
-  const withIsbn = merged.withIsbn.map((b,i) => ({b,i})).sort((x,y) => rank(y.b) - rank(x.b) || x.i - y.i).map(x => x.b);
-  const noIsbn = merged.noIsbn;
+  if(ndlRes.every(r => r.status === 'rejected')){ failed.push('NDLサーチ'); console.warn(ndlRes[0].reason); }
+  if(gRes.status === 'rejected'){ failed.push('Google Books'); console.warn(gRes.reason); }
+  const ndlLists = ndlRes.map(r => r.value || []);
+  const merged = mergeBooks([ ndlLists[0] || [], gRes.value || [], ...ndlLists.slice(1) ]);
+
+  // 出版年で絞る(年が分からない本は残す)
+  const inYears = b => !b.year || ((!f.from || b.year >= f.from) && (!f.until || b.year <= f.until));
+  const key = f.title || f.any;
+  const score = b => titleScore(b.title, key)
+    + (f.creator && (b.authors || []).some(a => norm(a).includes(norm(f.creator))) ? 1 : 0);
+  const withIsbn = merged.withIsbn.filter(inYears).map((b,i) => ({b,i}))
+    .sort((x,y) => score(y.b) - score(x.b) || x.i - y.i).map(x => x.b);
+  const noIsbn = merged.noIsbn.filter(inYears);
+
   let failNote = failed.length ? `(${failed.join('・')}に接続できなかったため、残りの結果だけ表示しています)` : '';
   if(failed.includes('Google Books') && !state.settings.gbkey) failNote += ' Google Booksは、設定でAPIキーを入れると安定します。';
 
-  if(!withIsbn.length && !noIsbn.length){ status.textContent = '見つかりませんでした。言葉を変えて試してください。' + failNote; return; }
+  if(!withIsbn.length && !noIsbn.length){ status.textContent = '見つかりませんでした。言葉や項目を変えて試してください。' + failNote; return; }
   const canCheck = !!state.settings.appkey;
   $('#search-results').innerHTML = withIsbn.map(b => bookHtml(b, 'search', canCheck)).join('');
   if(noIsbn.length){
@@ -582,9 +646,9 @@ async function openSimilar(book){
     return out;
   };
   const [byAuthorNdl, byAuthorG, byNdc] = await Promise.allSettled([
-    author ? searchNdl({ creator: author, cnt: 30 }) : Promise.resolve([]),
+    author ? searchNdlBooks({ creator: author, cnt: 50 }) : Promise.resolve([]),
     author ? searchGoogle('inauthor:"' + author + '"') : Promise.resolve([]),
-    ndc ? searchNdl({ ndc, cnt: 50 }) : Promise.resolve([])
+    ndc ? searchNdlBooks({ ndc, cnt: 80 }) : Promise.resolve([])
   ]);
   const sameAuthor = pick([...(byAuthorNdl.value||[]), ...(byAuthorG.value||[])], 12);
   const sameNdc = pick(byNdc.value || [], 15);
