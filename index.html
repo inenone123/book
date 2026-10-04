@@ -137,6 +137,12 @@ footer a{color:inherit}
   </div>
 
   <div class="field">
+    <label for="gbkey">Google BooksのAPIキー(なくても動きます)</label>
+    <input id="gbkey" type="password" style="width:100%" autocomplete="off">
+    <p class="help">キーなしだと、利用が混み合っているときにGoogle Booksの検索が失敗します。<a href="https://console.cloud.google.com/apis/library/books.googleapis.com" target="_blank" rel="noopener">Google Cloudのコンソール</a>でBooks APIを有効にして発行したキーを貼ると安定します。</p>
+  </div>
+
+  <div class="field">
     <label>調べる図書館</label>
     <div id="systems"></div>
     <button id="add-system" class="btn">図書館を追加</button>
@@ -179,7 +185,7 @@ footer a{color:inherit}
 /* ---------- 保存まわり ---------- */
 const STORE_KEY = 'hondana:v1';
 const DEFAULT_STATE = {
-  settings: { appkey: '', systems: [ {id:'Univ_Tokyo', label:'東大'}, {id:'Saitama_Sakado', label:'坂戸'} ] },
+  settings: { appkey: '', gbkey: '', systems: [ {id:'Univ_Tokyo', label:'東大'}, {id:'Saitama_Sakado', label:'坂戸'} ] },
   books: {}
 };
 function loadState(){
@@ -268,7 +274,8 @@ async function searchNdl(params){
 }
 
 async function searchGoogle(q){
-  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${enc(q)}&maxResults=20&printType=books`);
+  const key = state.settings.gbkey ? `&key=${enc(state.settings.gbkey)}` : '';
+  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${enc(q)}&maxResults=20&printType=books&langRestrict=ja${key}`);
   if(!res.ok) throw new Error('Google Books: ' + res.status);
   const j = await res.json();
   return (j.items || []).map(it => {
@@ -289,6 +296,15 @@ async function searchGoogle(q){
   });
 }
 
+const norm = s => String(s||'').normalize('NFKC').replace(/[\s・:：、。,.!?！？「」『』()（）]/g,'').toLowerCase();
+function titleScore(title, q){
+  const t = norm(title), k = norm(q);
+  if(!k) return 0;
+  if(t === k) return 4;
+  if(t.startsWith(k)) return 3;
+  if(t.includes(k)) return 2;
+  return 0;
+}
 function mergeBooks(lists){
   const map = new Map(); const noIsbn = [];
   for(const list of lists) for(const b of list){
@@ -366,22 +382,43 @@ function refreshStamps(isbns){
 /* ---------- 本のカード ---------- */
 const STATUS_LABEL = { want:'読みたい', reading:'読んでる', done:'読んだ' };
 
+function isbn13to10(s){
+  if(!s || s.length !== 13 || !s.startsWith('978')) return null;
+  const core = s.slice(3, 12);
+  let sum = 0;
+  for(let i=0;i<9;i++) sum += (10 - i) * Number(core[i]);
+  const c = (11 - sum % 11) % 11;
+  return core + (c === 10 ? 'X' : String(c));
+}
+/* 書影は複数の提供元を順に試す(見つからなければ次へ) */
+function coverCandidates(b){
+  const c = [];
+  if(b.isbn){
+    c.push(`https://ndlsearch.ndl.go.jp/thumbnail/${b.isbn}.jpg`);
+    c.push(`https://img.hanmoto.com/bd/img/${b.isbn}.jpg`);
+  }
+  if(b.cover) c.push(b.cover);
+  const i10 = isbn13to10(b.isbn);
+  if(i10) c.push(`https://images-na.ssl-images-amazon.com/images/P/${i10}.09.MZZZZZZZ.jpg`);
+  return c;
+}
 function coverHtml(b){
   const first = (b.title || '?').trim().charAt(0);
-  const fallback = b.cover ? esc(b.cover) : '';
-  if(!b.isbn && !b.cover) return `<div class="cover blank" aria-hidden="true">${esc(first)}</div>`;
-  const src = b.isbn ? `https://ndlsearch.ndl.go.jp/thumbnail/${b.isbn}.jpg` : fallback;
-  return `<img class="cover" alt="" loading="lazy" src="${src}" data-fallback="${fallback}" data-initial="${esc(first)}">`;
+  const list = coverCandidates(b);
+  if(!list.length) return `<div class="cover blank" aria-hidden="true">${esc(first)}</div>`;
+  return `<img class="cover" alt="" loading="lazy" src="${esc(list[0])}" data-rest="${esc(list.slice(1).join('|'))}" data-initial="${esc(first)}">`;
 }
-document.addEventListener('error', e => {
-  const img = e.target;
-  if(!(img instanceof HTMLImageElement) || !img.classList.contains('cover')) return;
-  const fb = img.dataset.fallback;
-  if(fb && img.src !== fb){ img.src = fb; img.dataset.fallback = ''; return; }
+function nextCover(img){
+  const rest = (img.dataset.rest || '').split('|').filter(Boolean);
+  if(rest.length){ img.dataset.rest = rest.slice(1).join('|'); img.src = rest[0]; return; }
   const div = document.createElement('div');
   div.className = 'cover blank'; div.setAttribute('aria-hidden','true'); div.textContent = img.dataset.initial || '?';
   img.replaceWith(div);
-}, true);
+}
+const isCover = t => t instanceof HTMLImageElement && t.classList.contains('cover');
+document.addEventListener('error', e => { if(isCover(e.target)) nextCover(e.target); }, true);
+/* 画像が無いときに1px画像を返す提供元があるので、小さすぎる画像も「無し」扱い */
+document.addEventListener('load', e => { if(isCover(e.target) && e.target.naturalWidth < 20) nextCover(e.target); }, true);
 
 function bookHtml(b, mode, pending){
   if(b.isbn) seenBooks.set(b.isbn, b);
@@ -422,14 +459,19 @@ $('#search-form').addEventListener('submit', async e => {
   $('#search-results').innerHTML = ''; $('#noisbn-box').hidden = true;
 
   const isbn = toIsbn13(q);
-  const ndlParams = isbn ? { isbn, cnt: 20 } : { any: q, cnt: 30 };
-  const [ndl, google] = await Promise.allSettled([ searchNdl(ndlParams), searchGoogle(isbn ? 'isbn:' + isbn : q) ]);
+  const [ndlTitle, ndlAny, google] = await Promise.allSettled(isbn
+    ? [ searchNdl({ isbn, cnt: 20 }), Promise.resolve([]), searchGoogle('isbn:' + isbn) ]
+    : [ searchNdl({ title: q, cnt: 50 }), searchNdl({ any: q, cnt: 30 }), searchGoogle(q) ]);
   if(my !== searchSeq) return;
   const failed = [];
-  if(ndl.status === 'rejected'){ failed.push('NDLサーチ'); console.warn(ndl.reason); }
+  if(ndlTitle.status === 'rejected' && ndlAny.status === 'rejected'){ failed.push('NDLサーチ'); console.warn(ndlTitle.reason); }
   if(google.status === 'rejected'){ failed.push('Google Books'); console.warn(google.reason); }
-  const { withIsbn, noIsbn } = mergeBooks([ ndl.value || [], google.value || [] ]);
-  const failNote = failed.length ? `(${failed.join('・')}に接続できなかったため、残りの結果だけ表示しています)` : '';
+  const merged = mergeBooks([ ndlTitle.value || [], google.value || [], ndlAny.value || [] ]);
+  const rank = b => titleScore(b.title, q);
+  const withIsbn = merged.withIsbn.map((b,i) => ({b,i})).sort((x,y) => rank(y.b) - rank(x.b) || x.i - y.i).map(x => x.b);
+  const noIsbn = merged.noIsbn;
+  let failNote = failed.length ? `(${failed.join('・')}に接続できなかったため、残りの結果だけ表示しています)` : '';
+  if(failed.includes('Google Books') && !state.settings.gbkey) failNote += ' Google Booksは、設定でAPIキーを入れると安定します。';
 
   if(!withIsbn.length && !noIsbn.length){ status.textContent = '見つかりませんでした。言葉を変えて試してください。' + failNote; return; }
   const canCheck = !!state.settings.appkey;
@@ -561,6 +603,7 @@ $('#similar-dlg').addEventListener('close', () => { if(!$('#view-shelf').hidden)
 /* ---------- 設定 ---------- */
 function renderSettings(){
   $('#appkey').value = state.settings.appkey;
+  $('#gbkey').value = state.settings.gbkey || '';
   $('#systems').innerHTML = state.settings.systems.map((s,i) => `<div class="sysrow">
     <input type="text" data-sys="${i}" data-field="label" value="${esc(s.label)}" aria-label="表示名">
     <input type="text" data-sys="${i}" data-field="id" value="${esc(s.id)}" aria-label="システムID">
@@ -568,6 +611,7 @@ function renderSettings(){
   $('#key-notice').hidden = !!state.settings.appkey;
 }
 $('#appkey').addEventListener('change', e => { state.settings.appkey = e.target.value.trim(); save(); renderSettings(); toast('キーを保存しました'); });
+$('#gbkey').addEventListener('change', e => { state.settings.gbkey = e.target.value.trim(); save(); toast('キーを保存しました'); });
 $('#systems').addEventListener('change', e => {
   const i = e.target.dataset.sys; if(i === undefined) return;
   state.settings.systems[i][e.target.dataset.field] = e.target.value.trim(); save(); availCache.clear();
