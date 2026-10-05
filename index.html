@@ -6,6 +6,9 @@
 <title>本棚</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://ndlsearch.ndl.go.jp">
+<link rel="preconnect" href="https://www.googleapis.com">
+<link rel="preconnect" href="https://api.calil.jp">
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Old+Mincho:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -26,10 +29,15 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.7 var(--sans)}
 .wrap{max-width:760px;margin:0 auto;padding:0 18px 64px}
 header{padding:28px 0 0}
+.head-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 h1{font:700 40px/1.1 var(--serif);margin:0 0 4px;letter-spacing:.06em}
+.sync-badge{font-size:12px;color:var(--muted);border:1px solid var(--rule);border-radius:999px;padding:2px 10px;background:var(--card);cursor:pointer}
+.sync-badge.error{color:var(--red);border-color:currentColor}
+.sync-badge.busy,.sync-badge.pending{color:var(--amber)}
 .lead{color:var(--muted);margin:0 0 18px;font-size:13px}
-nav{display:flex;gap:4px;border-bottom:2px solid var(--ink)}
-nav button{font:700 15px var(--sans);background:none;border:0;color:var(--muted);padding:10px 16px;cursor:pointer;border-radius:6px 6px 0 0}
+nav{display:flex;gap:2px;border-bottom:2px solid var(--ink);overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{font:700 15px var(--sans);background:none;border:0;color:var(--muted);padding:10px 13px;cursor:pointer;border-radius:6px 6px 0 0;white-space:nowrap;flex:0 0 auto}
 nav button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -37,14 +45,14 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn:hover{border-color:var(--ink)}
 .btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:700}
 .btn:disabled{opacity:.5;cursor:default}
-input[type=text],input[type=search],input[type=password],select,textarea{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:8px 10px}
+input[type=text],input[type=search],input[type=password],input[type=date],select,textarea{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:8px 10px;max-width:100%}
 section{padding-top:20px}
 .searchbar{display:flex;gap:8px}
 .searchbar input{flex:1;font-size:16px;min-width:0}
 .adv{margin-top:10px}
 .advgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:10px}
 .advgrid label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
-.advgrid input{width:100%;color:var(--ink)}
+.advgrid input,.advgrid select{width:100%;color:var(--ink)}
 .yr{display:flex;align-items:center;gap:6px}
 .yr input{min-width:0}
 .help-s{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:10px 0 0}
@@ -53,6 +61,7 @@ section{padding-top:20px}
 .notice{background:var(--card);border-left:4px solid var(--red);padding:10px 14px;margin:14px 0;font-size:14px}
 ul.books{list-style:none;margin:0;padding:0}
 .book{display:grid;grid-template-columns:60px 1fr;gap:14px;padding:16px 0;border-bottom:1px solid var(--rule)}
+.book>div{min-width:0}
 .cover{width:60px;height:86px;object-fit:cover;background:var(--rule);border-radius:2px}
 .cover.blank{display:flex;align-items:center;justify-content:center;font:700 22px var(--serif);color:var(--muted)}
 .title{font:700 17px/1.45 var(--serif);margin:0}
@@ -71,29 +80,65 @@ ul.books{list-style:none;margin:0;padding:0}
 .branches{font-size:12px;color:var(--muted);margin:-2px 0 8px}
 .branches a{color:inherit}
 .actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.memo{width:100%;margin-top:8px;min-height:2.6em;resize:vertical;font-size:13px}
-.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.rec{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:13px;margin:0 0 6px;color:var(--muted)}
+.st{font-size:12px;font-weight:700;border-radius:4px;padding:0 7px;border:1px solid currentColor}
+.st-done{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.st-reading{color:var(--amber)}
+.st-want{color:var(--ink)}
+.st-paused{color:var(--grey);border-style:dashed}
+.stars{color:var(--amber);letter-spacing:1px}
+.tag{font-size:12px;border:1px solid var(--rule);border-radius:999px;padding:0 8px;color:var(--ink);background:var(--card)}
+.memo-ex{font-size:13px;color:var(--muted);margin:2px 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
 .chip{border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:4px 12px;cursor:pointer;font-size:13px}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .filters input{flex:1;min-width:140px}
+.grow{flex:1}
 .empty{color:var(--muted);padding:28px 0;text-align:center}
-.field{margin:0 0 22px}
-.field label{display:block;font-weight:700;margin-bottom:6px}
+.field{margin:0 0 26px}
+.field>label,.field>.label{display:block;font-weight:700;margin-bottom:6px}
 .field .help{color:var(--muted);font-size:13px;margin:4px 0 0}
+.help-p{color:var(--muted);font-size:13px;margin:0 0 10px}
 .sysrow{display:grid;grid-template-columns:90px 1fr auto;gap:8px;margin-bottom:8px}
 .libresult{border-bottom:1px solid var(--rule);padding:8px 0;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center}
 h2{font:700 20px var(--serif);margin:26px 0 10px}
-h3{font:700 16px var(--serif);margin:20px 0 4px}
+h3{font:700 16px var(--serif);margin:22px 0 6px}
 dialog{border:0;border-radius:8px;padding:0;max-width:720px;width:calc(100% - 24px);max-height:85vh;background:var(--paper);color:var(--ink)}
 dialog::backdrop{background:rgba(10,15,25,.55)}
-.dlg-head{position:sticky;top:0;background:var(--paper);display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:2px solid var(--ink);z-index:1}
+.dlg-head{position:sticky;top:0;background:var(--paper);display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-bottom:2px solid var(--ink);z-index:1}
 .dlg-head h2{margin:0;font-size:17px}
 .dlg-body{padding:0 18px 18px}
+.ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin:14px 0}
+.ed-grid label,.ed-block{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.ed-grid select,.ed-grid input,.ed-block textarea{color:var(--ink);width:100%}
+.ed-block{margin:0 0 16px}
+@media (max-width:520px){.ed-grid{grid-template-columns:1fr}}
+.starpick{display:flex;gap:2px}
+.starpick button{font-size:26px;line-height:1;background:none;border:0;color:var(--rule);cursor:pointer;padding:2px}
+.starpick button[aria-pressed="true"]{color:var(--amber)}
+.tagpick{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
 details{margin-top:14px}
 summary{cursor:pointer;color:var(--muted);font-size:13px}
+#bulk-text{width:100%;font-size:15px;line-height:1.6;margin-bottom:8px}
+.bulk-pick{width:100%;font-size:13px;margin-top:4px}
+#scanner{width:100%;max-width:420px;margin:10px 0;border-radius:6px;overflow:hidden}
+.commit{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:4px 16px 16px;margin-top:18px}
+.commit h2{margin-top:14px}
+.year-line{font:500 18px/1.6 var(--serif);margin:4px 0 2px}
+.year-line strong{font-size:30px;margin:0 2px}
+.shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,30px);grid-auto-rows:150px;column-gap:3px;row-gap:14px;align-items:end;margin:18px 0 6px;padding-bottom:4px;
+  background:repeating-linear-gradient(to bottom,transparent 0 150px,var(--ink) 150px 154px,transparent 154px 164px)}
+.spine{height:120px;width:100%;border:0;padding:8px 0;border-radius:2px 2px 0 0;cursor:pointer;display:flex;justify-content:center;color:#F3F0E6;box-shadow:inset -3px 0 0 rgba(0,0,0,.2),inset 2px 0 0 rgba(255,255,255,.08);transition:transform .15s}
+.spine span{writing-mode:vertical-rl;font:500 12px/1.1 var(--serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:100%}
+.spine:hover{transform:translateY(-5px)}
+@media (prefers-reduced-motion:reduce){.spine{transition:none}.spine:hover{transform:none}}
+.divider{font-size:11px;line-height:1.2;color:var(--muted);align-self:end;justify-self:center;white-space:nowrap;padding-bottom:4px;border-bottom:1px solid var(--muted)}
+.tagrow{display:grid;grid-template-columns:minmax(4em,9em) 1fr 3.5em;gap:10px;align-items:center;font-size:13px;padding:3px 0}
+.tagrow span:last-child{text-align:right;color:var(--muted)}
+.tagbar{display:block;height:10px;background:var(--ink);border-radius:2px;min-width:3px}
 footer{color:var(--muted);font-size:12px;margin-top:40px}
 footer a{color:inherit}
-#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
 #toast.show{opacity:1}
 [hidden]{display:none!important}
 </style>
@@ -101,16 +146,19 @@ footer a{color:inherit}
 <body>
 <div class="wrap">
 <header>
-  <h1>本棚</h1>
-  <p class="lead">東大と坂戸の図書館を一度に調べて、読みたい本を並べておく場所</p>
+  <div class="head-row"><h1>本棚</h1><button id="sync-badge" class="sync-badge" hidden></button></div>
+  <p class="lead">図書館の蔵書を一度に調べて、読んだ本と読みたい本を記録しておく場所</p>
   <nav role="tablist">
     <button role="tab" data-tab="search" aria-selected="true">探す</button>
     <button role="tab" data-tab="shelf" aria-selected="false">本棚</button>
+    <button role="tab" data-tab="log" aria-selected="false">記録</button>
+    <button role="tab" data-tab="bulk" aria-selected="false">一括登録</button>
     <button role="tab" data-tab="settings" aria-selected="false">設定</button>
   </nav>
 </header>
 
 <main>
+<!-- 探す -->
 <section id="view-search">
   <div id="key-notice" class="notice" hidden>蔵書を確認するには、カーリルのアプリケーションキーが必要です。<button class="btn" data-goto="settings">設定を開く</button></div>
   <form id="search-form">
@@ -134,22 +182,77 @@ footer a{color:inherit}
   <details id="noisbn-box" hidden><summary></summary><ul id="noisbn-list" class="books"></ul></details>
 </section>
 
+<!-- 本棚 -->
 <section id="view-shelf" hidden>
-  <div class="filters">
+  <div class="filters" id="status-chips">
     <button class="chip" data-filter="all" aria-pressed="true">すべて</button>
     <button class="chip" data-filter="want" aria-pressed="false">読みたい</button>
     <button class="chip" data-filter="reading" aria-pressed="false">読んでる</button>
     <button class="chip" data-filter="done" aria-pressed="false">読んだ</button>
+    <button class="chip" data-filter="paused" aria-pressed="false">中断</button>
   </div>
   <div class="filters">
-    <input id="shelf-q" type="search" placeholder="本棚の中を絞り込む">
-    <button id="recheck-all" class="btn">蔵書をまとめて更新</button>
+    <input id="shelf-q" type="search" placeholder="書名・著者・メモで絞り込む">
+    <select id="shelf-tag" aria-label="タグで絞り込む"></select>
+    <select id="shelf-sort" aria-label="並べ方">
+      <option value="added">入れた順</option>
+      <option value="updated">更新した順</option>
+      <option value="finished">読み終えた順</option>
+      <option value="rating">評価の高い順</option>
+      <option value="title">書名順</option>
+    </select>
   </div>
+  <div class="filters"><span id="shelf-count" class="meta grow" style="margin:0"></span><button id="recheck-all" class="btn">表示中の本の蔵書を確認</button></div>
   <div id="shelf-status" class="status" aria-live="polite"></div>
   <ul id="shelf-list" class="books"></ul>
 </section>
 
+<!-- 記録 -->
+<section id="view-log" hidden>
+  <div class="filters"><select id="log-year" aria-label="年"></select></div>
+  <div id="log-body"></div>
+</section>
+
+<!-- 一括登録 -->
+<section id="view-bulk" hidden>
+  <p class="help-p">1行に1冊ずつ書いてください。ISBN か「書名 / 著者」の形で(著者は省いても構いません)。表計算ソフトから「書名」「著者」の2列をそのまま貼っても読めます。手元の本はバーコードを読み取ると、ISBNがここに足されていきます。</p>
+  <textarea id="bulk-text" rows="9" placeholder="9784101010014&#10;こころ / 夏目漱石&#10;銃・病原菌・鉄"></textarea>
+  <div class="actions">
+    <button id="scan-start" class="btn">バーコードを読み取る</button>
+    <button id="bulk-match" class="btn primary">照合する</button>
+  </div>
+  <div id="scanner-box" hidden>
+    <div id="scanner"></div>
+    <p class="status" id="scan-status" aria-live="polite"></p>
+    <button id="scan-stop" class="btn">読み取りを終える</button>
+  </div>
+  <div id="bulk-status" class="status" aria-live="polite"></div>
+  <ul id="bulk-list" class="books"></ul>
+  <div id="bulk-commit" class="commit" hidden>
+    <h2>まとめて設定して本棚に入れる</h2>
+    <div class="advgrid">
+      <label>状態<select id="bulk-st"></select></label>
+      <label>読み終えた日(「読んだ」のとき・空でも可)<input id="bulk-end" type="date"></label>
+      <label style="grid-column:1/-1">タグ(読点かカンマで区切って複数)<input id="bulk-tags" type="text" list="tag-list" placeholder="例:高校で読んだ、小説"></label>
+    </div>
+    <div class="actions" style="margin-top:14px"><button id="bulk-save" class="btn primary">本棚に入れる</button><button id="bulk-clear" class="btn">やり直す</button></div>
+  </div>
+</section>
+
+<!-- 設定 -->
 <section id="view-settings" hidden>
+  <div class="field">
+    <label for="gh-token">端末間の同期(GitHubのトークン)</label>
+    <input id="gh-token" type="password" style="width:100%" autocomplete="off" placeholder="ghp_…">
+    <p class="help"><a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=hondana" target="_blank" rel="noopener">GitHubのトークン作成ページ</a>で「gist」だけにチェックを入れて発行したトークン(classic)を貼ってください。本棚の中身はあなたのGitHubの非公開Gist(URLを知らない人には見えない場所)に置かれ、同じトークンを入れた端末どうしで揃います。トークンとAPIキーはこの端末にだけ保存され、同期はされません。</p>
+    <div class="actions" style="margin-top:8px">
+      <button id="sync-connect" class="btn primary">同期を始める</button>
+      <button id="sync-now" class="btn">今すぐ同期</button>
+      <button id="sync-off" class="btn">この端末の同期をやめる</button>
+    </div>
+    <p id="sync-info" class="help"></p>
+  </div>
+
   <div class="field">
     <label for="appkey">カーリルのアプリケーションキー</label>
     <input id="appkey" type="password" style="width:100%" autocomplete="off">
@@ -163,29 +266,34 @@ footer a{color:inherit}
   </div>
 
   <div class="field">
-    <label>調べる図書館</label>
+    <span class="label">調べる図書館</span>
     <div id="systems"></div>
     <button id="add-system" class="btn">図書館を追加</button>
     <p class="help">左が表示名、右がカーリルのシステムIDです。</p>
   </div>
 
   <div class="field">
-    <label>システムIDを調べる</label>
+    <span class="label">システムIDを調べる</span>
     <div class="searchbar">
-      <input id="lib-pref" type="text" value="埼玉県" style="flex:0 0 7em">
-      <input id="lib-city" type="text" value="坂戸市">
+      <input id="lib-pref" type="text" value="埼玉県" style="flex:0 0 7em" aria-label="都道府県">
+      <input id="lib-city" type="text" value="坂戸市" aria-label="市区町村">
       <button id="lib-lookup" class="btn">調べる</button>
     </div>
     <div id="lib-results"></div>
   </div>
 
   <div class="field">
-    <label>本棚のバックアップ</label>
+    <span class="label">タグ</span>
+    <div id="tag-admin"></div>
+  </div>
+
+  <div class="field">
+    <span class="label">本棚のバックアップ</span>
     <div class="actions">
       <button id="export" class="btn">書き出す(JSON)</button>
       <label class="btn" style="font-weight:400;margin:0">読み込む<input id="import" type="file" accept="application/json" hidden></label>
     </div>
-    <p class="help">本棚はこのブラウザの中に保存されています。別の端末に移すときや、念のための控えに使ってください。読み込むと、同じ本は読み込んだ内容で上書きされます。</p>
+    <p class="help">念のための控えに使ってください。読み込むと、同じ本は読み込んだ内容で上書きされます(以前の版の書き出しファイルも読めます)。</p>
   </div>
 </section>
 </main>
@@ -193,56 +301,80 @@ footer a{color:inherit}
 <footer>蔵書情報:<a href="https://calil.jp/" target="_blank" rel="noopener">カーリル</a> / 書誌情報:<a href="https://ndlsearch.ndl.go.jp/" target="_blank" rel="noopener">国立国会図書館サーチ</a>、Google Books</footer>
 </div>
 
+<datalist id="tag-list"></datalist>
+
 <dialog id="similar-dlg">
   <div class="dlg-head"><h2 id="similar-title">似た本</h2><button class="btn" id="similar-close">閉じる</button></div>
   <div class="dlg-body" id="similar-body"></div>
+</dialog>
+<dialog id="edit-dlg">
+  <div class="dlg-head"><h2 id="edit-title">記録</h2><button class="btn" id="edit-close">閉じる</button></div>
+  <div class="dlg-body" id="edit-body"></div>
 </dialog>
 <div id="toast" role="status"></div>
 
 <script>
 'use strict';
 
-/* ---------- 保存まわり ---------- */
-const STORE_KEY = 'hondana:v1';
+/* =========================================================
+   定数
+   ========================================================= */
+const STORE_KEY = 'hondana:v2';
+const OLD_KEY   = 'hondana:v1';
+const AVAIL_KEY = 'hondana:avail';
+const STATUS_LABEL = { want:'読みたい', reading:'読んでる', done:'読んだ', paused:'中断' };
 const DEFAULT_STATE = {
-  settings: { appkey: '', gbkey: '', systems: [ {id:'Univ_Tokyo', label:'東大'}, {id:'Saitama_Sakado', label:'坂戸'} ] },
-  books: {}
+  settings: {
+    appkey: '', gbkey: '',
+    systems: [ {id:'Univ_Tokyo', label:'東大'}, {id:'Saitama_Sakado', label:'坂戸'} ],
+    systemsAt: 0,
+    sync: { token:'', gistId:'', lastSync:0, error:'' }
+  },
+  books: {},     // id -> 記録
+  deleted: {}    // id -> 外した時刻(同期で「外した」ことを伝えるため)
 };
-function loadState(){
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(!raw) return structuredClone(DEFAULT_STATE);
-    const s = JSON.parse(raw);
-    return { settings: {...structuredClone(DEFAULT_STATE.settings), ...(s.settings||{})}, books: s.books || {} };
-  }catch(e){ return structuredClone(DEFAULT_STATE); }
-}
-let state = loadState();
-function save(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
-  catch(e){ toast('保存できませんでした: ' + e.message); }
-}
+const SEARCH_FRESH = 30 * 60e3;      // 探す画面の蔵書情報は30分使い回す
+const SHELF_FRESH  = 12 * 3600e3;    // 本棚の蔵書情報は12時間使い回す
 
-/* ---------- 小物 ---------- */
+/* =========================================================
+   小物
+   ========================================================= */
 const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 const enc = encodeURIComponent;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function chunks(arr, n){ const out=[]; for(let i=0;i<arr.length;i+=n) out.push(arr.slice(i,i+n)); return out; }
+const today = () => new Date().toLocaleDateString('sv-SE');      // YYYY-MM-DD
+const fmtDate = d => d ? d.replaceAll('-', '/') : '';
+const byJa = (a, b) => String(a).localeCompare(String(b), 'ja');
 let toastTimer;
 function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
-
+function hash(s){
+  let h = 0x811c9dc5;
+  for(const ch of String(s)){ h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(36);
+}
+const norm = s => String(s||'').normalize('NFKC').replace(/[\s・:：、。,.!?！？「」『』()（）]/g,'').toLowerCase();
 function cleanIsbn(s){ return String(s||'').replace(/[^0-9Xx]/g,'').toUpperCase(); }
 function toIsbn13(s){
   s = cleanIsbn(s);
-  if(s.length === 13) return s;
+  if(s.length === 13) return /^97[89]/.test(s) ? s : null;
   if(s.length !== 10) return null;
   const core = '978' + s.slice(0,9);
   let sum = 0;
   for(let i=0;i<12;i++) sum += Number(core[i]) * (i%2===0 ? 1 : 3);
   return core + ((10 - sum % 10) % 10);
+}
+function isbn13to10(s){
+  if(!s || s.length !== 13 || !s.startsWith('978')) return null;
+  const core = s.slice(3, 12);
+  let sum = 0;
+  for(let i=0;i<9;i++) sum += (10 - i) * Number(core[i]);
+  const c = (11 - sum % 11) % 11;
+  return core + (c === 10 ? 'X' : String(c));
 }
 function cleanAuthor(a){
   let s = String(a||'').trim()
@@ -251,7 +383,208 @@ function cleanAuthor(a){
   if(/[\u3040-\u30ff\u4e00-\u9fff]/.test(s)) s = s.replace(/[,，]\s*/g, '');
   return s.trim();
 }
+/* ISBNがあればISBN、なければ書名+著者から作る(どの端末でも同じIDになる) */
+function bookId(b){ return b.isbn || ('t' + hash(norm(b.title) + '|' + norm(b.authors?.[0] || ''))); }
+/* 同時にn個ずつ処理する */
+async function pool(items, n, fn){
+  let next = 0;
+  const worker = async () => { while(next < items.length){ const k = next++; await fn(items[k], k); } };
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, worker));
+}
 
+/* =========================================================
+   保存まわり
+   ========================================================= */
+let availStore = {};   // isbn -> { info: カーリルの結果, at: 確認時刻 }(端末ごと、同期しない)
+try{ availStore = JSON.parse(localStorage.getItem(AVAIL_KEY) || '{}') || {}; }catch(e){ availStore = {}; }
+
+function migrateBook(b, key){
+  const isbn = b.isbn || (/^97[89]\d{10}$/.test(key) ? key : null);
+  const now = Date.now();
+  return {
+    id: b.id || isbn || key, isbn,
+    title: b.title || '', authors: Array.isArray(b.authors) ? b.authors : [],
+    publisher: b.publisher || '', year: b.year || '', ndc: b.ndc || '', cover: b.cover || '', link: b.link || '',
+    status: STATUS_LABEL[b.status] ? b.status : 'want',
+    tags: Array.isArray(b.tags) ? b.tags : [],
+    rating: Math.max(0, Math.min(5, Number(b.rating) || 0)),
+    startDate: b.startDate || '', endDate: b.endDate || '', memo: b.memo || '',
+    addedAt: b.addedAt || now, updatedAt: b.updatedAt || b.addedAt || now
+  };
+}
+function loadState(){
+  const base = structuredClone(DEFAULT_STATE);
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      return {
+        settings: { ...base.settings, ...(s.settings || {}), sync: { ...base.settings.sync, ...(s.settings?.sync || {}) } },
+        books: s.books || {}, deleted: s.deleted || {}
+      };
+    }
+    /* 前の版(v1)のデータを引き継ぐ。v1のデータ自体は消さずに残す */
+    const old = localStorage.getItem(OLD_KEY);
+    if(old){
+      const s = JSON.parse(old);
+      const st = { ...base, settings: { ...base.settings, ...(s.settings || {}), sync: base.settings.sync } };
+      for(const [k, b] of Object.entries(s.books || {})){
+        const rec = migrateBook(b, k);
+        st.books[rec.id] = rec;
+        if(b.avail && rec.isbn) availStore[rec.isbn] = { info: b.avail, at: b.availAt || 0 };
+      }
+      return st;
+    }
+  }catch(e){ console.warn(e); }
+  return base;
+}
+let state = loadState();
+
+function saveLocal(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch(e){ toast('保存できませんでした: ' + e.message); }
+}
+/* 本棚を変えたら必ずこれを呼ぶ(保存して、同期を予約する) */
+function commit(){ saveLocal(); Sync.schedule(); }
+
+let availSaveTimer;
+function saveAvail(){
+  clearTimeout(availSaveTimer);
+  availSaveTimer = setTimeout(() => {
+    const keys = Object.keys(availStore);
+    if(keys.length > 400){
+      const keep = new Set(Object.values(state.books).map(b => b.isbn));
+      const cut = Date.now() - 864e5;
+      for(const k of keys) if(!keep.has(k) && availStore[k].at < cut) delete availStore[k];
+    }
+    try{ localStorage.setItem(AVAIL_KEY, JSON.stringify(availStore)); }catch(e){ console.warn(e); }
+  }, 600);
+}
+
+/* =========================================================
+   端末間の同期(GitHub Gist)
+   ========================================================= */
+const GIST_FILE = 'hondana.json';
+const GIST_DESC = '本棚アプリの同期データ (hondana-sync)';
+
+function payload(){
+  return { v: 2, books: state.books, deleted: state.deleted, systems: state.settings.systems, systemsAt: state.settings.systemsAt || 0 };
+}
+function signature(p){
+  const b = Object.entries(p.books || {}).map(([id, x]) => id + ':' + (x.updatedAt || 0)).sort().join(',');
+  const d = Object.entries(p.deleted || {}).map(([id, t]) => id + ':' + t).sort().join(',');
+  return b + '|' + d + '|' + (p.systemsAt || 0);
+}
+/* 本ごとに「新しく更新された方」を残す。外した記録の方が新しければ外す */
+function applyMerge(r){
+  const L = state.books, LD = state.deleted, RB = r.books || {}, RD = r.deleted || {};
+  const ids = new Set([...Object.keys(L), ...Object.keys(LD), ...Object.keys(RB), ...Object.keys(RD)]);
+  const books = {}, deleted = {};
+  const old = Date.now() - 180 * 864e5;
+  for(const id of ids){
+    const a = L[id], b = RB[id] ? migrateBook(RB[id], id) : null;
+    const book = !a ? b : !b ? a : ((b.updatedAt || 0) > (a.updatedAt || 0) ? b : a);
+    const del = Math.max(LD[id] || 0, RD[id] || 0);
+    if(book && (book.updatedAt || 0) > del) books[id] = book;
+    else if(del && del > old) deleted[id] = del;
+  }
+  state.books = books; state.deleted = deleted;
+  if((r.systemsAt || 0) > (state.settings.systemsAt || 0) && Array.isArray(r.systems) && r.systems.length){
+    state.settings.systems = r.systems; state.settings.systemsAt = r.systemsAt;
+  }
+}
+
+const Sync = {
+  timer: null, running: false, again: false,
+  get on(){ return !!state.settings.sync.token; },
+  schedule(ms = 2500){
+    if(!this.on) return;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.run(), ms);
+    setBadge('pending');
+  },
+  async api(path, opt = {}){
+    const headers = { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + state.settings.sync.token };
+    if(opt.body) headers['Content-Type'] = 'application/json';
+    let res;
+    try{ res = await fetch('https://api.github.com' + path, { ...opt, headers, cache: 'no-store' }); }
+    catch(e){ throw new Error('GitHubに接続できませんでした(通信状態を確かめてください)'); }
+    if(res.status === 401) throw new Error('GitHubのトークンが無効か、期限が切れています');
+    if(res.status === 403 || res.status === 429) throw new Error('トークンにgistの権限がないか、GitHubの利用制限にかかっています');
+    if(!res.ok){ const e = new Error('GitHubがエラーを返しました(' + res.status + ')'); e.status = res.status; throw e; }
+    return res.json();
+  },
+  async findGist(){
+    const list = await this.api('/gists?per_page=100');
+    return list.find(g => g.description === GIST_DESC && g.files?.[GIST_FILE])?.id || '';
+  },
+  async readGist(id){
+    const g = await this.api('/gists/' + id);
+    const f = g.files?.[GIST_FILE];
+    if(!f) return null;
+    let text = f.content;
+    if(f.truncated){ const r = await fetch(f.raw_url, { cache: 'no-store' }); text = await r.text(); }
+    return JSON.parse(text);
+  },
+  async run(){
+    if(!this.on) return;
+    if(this.running){ this.again = true; return; }
+    this.running = true; clearTimeout(this.timer); this.timer = null; setBadge('busy');
+    const s = state.settings.sync;
+    try{
+      let remote = null;
+      if(!s.gistId) s.gistId = await this.findGist();
+      if(s.gistId){
+        try{ remote = await this.readGist(s.gistId); }
+        catch(e){
+          if(e.status !== 404) throw e;
+          s.gistId = await this.findGist();
+          if(s.gistId) remote = await this.readGist(s.gistId);
+        }
+      }
+      if(!s.gistId){
+        const g = await this.api('/gists', { method: 'POST', body: JSON.stringify({ description: GIST_DESC, public: false, files: { [GIST_FILE]: { content: JSON.stringify(payload()) } } }) });
+        s.gistId = g.id; remote = payload();
+      }
+      const before = signature(payload());
+      if(remote) applyMerge(remote);
+      const mine = payload();
+      if(!remote || signature(mine) !== signature(remote)){
+        await this.api('/gists/' + s.gistId, { method: 'PATCH', body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(mine) } } }) });
+      }
+      s.lastSync = Date.now(); s.error = '';
+      saveLocal();
+      if(signature(mine) !== before) rerenderCurrent();
+      setBadge('ok');
+    }catch(err){
+      console.warn(err);
+      s.error = err.message; saveLocal(); setBadge('error', err.message);
+    }finally{
+      this.running = false;
+      if(this.again){ this.again = false; this.schedule(300); }
+      if(currentTab === 'settings') renderSyncInfo();
+    }
+  }
+};
+function setBadge(kind, msg){
+  const el = $('#sync-badge');
+  if(!state.settings.sync.token){ el.hidden = true; return; }
+  el.hidden = false;
+  el.className = 'sync-badge ' + kind;
+  const t = state.settings.sync.lastSync ? new Date(state.settings.sync.lastSync).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }) : '';
+  el.textContent = kind === 'busy' ? '同期中…' : kind === 'pending' ? '同期待ち' : kind === 'error' ? '同期できません' : (t ? `同期 ${t}` : '同期オン');
+  el.title = msg || '';
+}
+
+/* =========================================================
+   通信の部品
+   ========================================================= */
+async function fetchT(url, ms = 15000, opt = {}){
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
+  try{ return await fetch(url, { ...opt, signal: c.signal }); }
+  catch(e){ if(e.name === 'AbortError'){ const err = new Error('応答がありませんでした'); err.timeout = true; throw err; } throw e; }
+  finally{ clearTimeout(t); }
+}
 /* JSONP(カーリルはこの方式で呼ぶ) */
 let jsonpSeq = 0;
 function jsonp(url, timeoutMs = 20000){
@@ -261,16 +594,18 @@ function jsonp(url, timeoutMs = 20000){
     const timer = setTimeout(() => { cleanup(); reject(new Error('カーリルから応答がありません')); }, timeoutMs);
     function cleanup(){ clearTimeout(timer); delete window[name]; script.remove(); }
     window[name] = data => { cleanup(); resolve(data); };
-    script.onerror = () => { cleanup(); reject(new Error('カーリルに接続できませんでした(キーを確認してください)')); };
+    script.onerror = () => { cleanup(); reject(new Error('カーリルに接続できませんでした(キーを確かめてください)')); };
     script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + name;
     document.head.appendChild(script);
   });
 }
 
-/* ---------- 書誌検索 ---------- */
-async function searchNdl(params){
+/* =========================================================
+   書誌検索
+   ========================================================= */
+async function searchNdl(params, ms = 15000){
   const qs = Object.entries(params).map(([k,v]) => `${k}=${enc(v)}`).join('&');
-  const res = await fetch(`https://ndlsearch.ndl.go.jp/api/opensearch?${qs}`);
+  const res = await fetchT(`https://ndlsearch.ndl.go.jp/api/opensearch?${qs}`, ms);
   if(!res.ok) throw new Error('NDLサーチ: ' + res.status);
   const doc = new DOMParser().parseFromString(await res.text(), 'application/xml');
   return [...doc.getElementsByTagName('item')].map(item => {
@@ -282,29 +617,28 @@ async function searchNdl(params){
     if(!authors.length && txt('author')) authors = txt('author').split(/\s*,\s*/).map(cleanAuthor).filter(Boolean);
     return {
       isbn: isbnEl ? toIsbn13(isbnEl.textContent) : null,
-      title: txt('title'),
-      authors,
+      title: txt('title'), authors,
       publisher: txt('dc:publisher'),
       year: (txt('dcterms:issued') || txt('dc:date')).replace(/\D/g,'').slice(0,4),
       ndc: ndcEl ? ndcEl.textContent.trim() : '',
-      cover: '',
-      link: txt('link')
+      cover: '', link: txt('link')
     };
   });
 }
-
-/* 雑誌記事を除いて「図書」だけに絞る。絞り込みが効かないときは全体で検索し直す */
+/* 図書(雑誌記事などを除く)に絞って検索。絞って0件・失敗なら全体で検索し直す */
 async function searchNdlBooks(params){
   try{
-    const r = await searchNdl({ dpid: 'book', ...params });
+    const r = await searchNdl({ mediatype: 'books', ...params });
     if(r.length) return r;
-  }catch(e){ console.warn('dpid=book で失敗、全体で再検索', e); }
+  }catch(e){
+    if(e.timeout) throw e;   // 時間切れのときは、もう一度待たせない
+    console.warn('mediatype=books で失敗、全体で再検索', e);
+  }
   return searchNdl(params);
 }
-
-async function searchGoogle(q){
+async function searchGoogle(q, max = 20){
   const key = state.settings.gbkey ? `&key=${enc(state.settings.gbkey)}` : '';
-  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${enc(q)}&maxResults=20&printType=books&langRestrict=ja${key}`);
+  const res = await fetchT(`https://www.googleapis.com/books/v1/volumes?q=${enc(q)}&maxResults=${max}&printType=books&langRestrict=ja${key}`, 10000);
   if(!res.ok) throw new Error('Google Books: ' + res.status);
   const j = await res.json();
   return (j.items || []).map(it => {
@@ -324,8 +658,7 @@ async function searchGoogle(q){
     };
   });
 }
-
-const norm = s => String(s||'').normalize('NFKC').replace(/[\s・:：、。,.!?！？「」『』()（）]/g,'').toLowerCase();
+const quote = x => `"${String(x).replace(/"/g,'')}"`;
 function titleScore(title, q){
   const t = norm(title), k = norm(q);
   if(!k) return 0;
@@ -335,39 +668,80 @@ function titleScore(title, q){
   return 0;
 }
 function mergeBooks(lists){
-  const map = new Map(); const noIsbn = [];
+  const map = new Map(); const noIsbn = new Map();
   for(const list of lists) for(const b of list){
     if(!b.title) continue;
-    if(!b.isbn){ noIsbn.push(b); continue; }
+    if(!b.isbn){ const id = bookId(b); if(!noIsbn.has(id)) noIsbn.set(id, b); continue; }
     const prev = map.get(b.isbn);
-    if(!prev){ map.set(b.isbn, {...b}); continue; }
+    if(!prev){ map.set(b.isbn, { ...b }); continue; }
     for(const k of ['title','publisher','year','ndc','cover','link']) if(!prev[k] && b[k]) prev[k] = b[k];
     if(!prev.authors.length) prev.authors = b.authors;
   }
-  return { withIsbn: [...map.values()], noIsbn };
+  return { withIsbn: [...map.values()], noIsbn: [...noIsbn.values()] };
 }
 
-/* ---------- 蔵書確認(カーリル) ---------- */
-const availCache = new Map();   // isbn -> {systemid: info}
-const seenBooks = new Map();    // isbn -> book(画面に出した本)
+/* =========================================================
+   蔵書確認(カーリル)
+   画面に近づいた本だけを、20冊ずつ・最大2本並行で問い合わせる
+   ========================================================= */
+const availQueue = new Set();
+const inflight = new Set();
+let calilRunning = 0, flushTimer = null, lastErrToast = 0;
 
-async function checkAvailability(isbns, onUpdate){
+function availFresh(isbn, maxAge){
+  const e = availStore[isbn];
+  if(!e || Date.now() - e.at > maxAge) return false;
+  return state.settings.systems.every(s => !s.id.trim() || (e.info?.[s.id.trim()] && e.info[s.id.trim()].status !== 'Running'));
+}
+function requestAvail(isbn, force = false, maxAge = SEARCH_FRESH){
+  if(!state.settings.appkey || !isbn) return;
+  if(!force && availFresh(isbn, maxAge)) return;
+  if(inflight.has(isbn) || availQueue.has(isbn)) return;
+  availQueue.add(isbn);
+  refreshStamps([isbn]);
+  clearTimeout(flushTimer);
+  flushTimer = setTimeout(flushAvail, 120);
+}
+function flushAvail(){
+  while(availQueue.size && calilRunning < 2){
+    const batch = [...availQueue].slice(0, 20);
+    batch.forEach(i => { availQueue.delete(i); inflight.add(i); });
+    calilRunning++;
+    runCalil(batch)
+      .catch(err => { if(Date.now() - lastErrToast > 5000){ toast(err.message); lastErrToast = Date.now(); } })
+      .finally(() => { batch.forEach(i => inflight.delete(i)); calilRunning--; refreshStamps(batch); flushAvail(); });
+  }
+}
+async function runCalil(isbns){
   const { appkey, systems } = state.settings;
-  if(!appkey) throw new Error('設定でカーリルのアプリケーションキーを入力してください');
   const ids = systems.map(s => s.id.trim()).filter(Boolean);
   if(!ids.length) throw new Error('設定で図書館を1つ以上登録してください');
   const base = `https://api.calil.jp/check?appkey=${enc(appkey)}`;
-  for(const chunk of chunks([...new Set(isbns)], 20)){
-    let data = await jsonp(`${base}&isbn=${chunk.join(',')}&systemid=${ids.map(enc).join(',')}`);
-    let guard = 0;
-    while(true){
-      if(data.books) for(const [isbn, info] of Object.entries(data.books)) availCache.set(isbn, info);
-      onUpdate?.(Object.keys(data.books || {}));
-      if(data.continue !== 1 || guard++ > 30) break;
-      await sleep(2000);
-      data = await jsonp(`${base}&session=${enc(data.session)}`);
-    }
+  let data = await jsonp(`${base}&isbn=${isbns.join(',')}&systemid=${ids.map(enc).join(',')}`);
+  let guard = 0;
+  while(true){
+    const now = Date.now();
+    const got = Object.entries(data.books || {});
+    for(const [isbn, info] of got) availStore[isbn] = { info, at: now };
+    refreshStamps(got.map(([i]) => i));
+    if(data.continue !== 1 || guard++ > 30) break;
+    await sleep(2000);
+    data = await jsonp(`${base}&session=${enc(data.session)}`);
   }
+  saveAvail();
+}
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+  for(const en of entries) if(en.isIntersecting){
+    io.unobserve(en.target);
+    requestAvail(en.target.dataset.stamps, false, Number(en.target.dataset.maxage) || SEARCH_FRESH);
+  }
+}, { rootMargin: '500px 0px' }) : null;
+function observeStamps(root){
+  if(!state.settings.appkey) return;
+  root.querySelectorAll('[data-stamps][data-maxage]').forEach(el => {
+    if(availFresh(el.dataset.stamps, Number(el.dataset.maxage))) return;
+    if(io) io.observe(el); else requestAvail(el.dataset.stamps, false, Number(el.dataset.maxage));
+  });
 }
 
 const OK_WORDS = ['貸出可','蔵書あり','館内のみ'];
@@ -383,43 +757,36 @@ function summarize(info){
   if(vals.some(v => BUSY_WORDS.includes(v))) return { cls:'busy', text:'貸出中' };
   return { cls:'none', text: vals[0] };
 }
-function availOf(isbn){ return availCache.get(isbn) || state.books[isbn]?.avail || null; }
-
-function stampsHtml(isbn, pending){
-  const avail = availOf(isbn);
+function stampsHtml(isbn){
+  const avail = availStore[isbn]?.info;
+  const pending = availQueue.has(isbn) || inflight.has(isbn);
   const stamps = []; const branches = [];
   for(const sys of state.settings.systems){
-    let s = summarize(avail?.[sys.id]);
-    if(pending && s.cls === 'unchecked') s = { cls:'pending', text:'確認中' };
-    stamps.push(`<span class="stamp ${s.cls}"><b>${esc(sys.label || sys.id)}</b>${esc(s.text)}</span>`);
-    const info = avail?.[sys.id];
+    const sid = sys.id.trim(); if(!sid) continue;
+    let s = summarize(avail?.[sid]);
+    if(pending && (s.cls === 'unchecked' || s.cls === 'pending')) s = { cls:'pending', text:'確認中' };
+    stamps.push(`<span class="stamp ${s.cls}"><b>${esc(sys.label || sid)}</b>${esc(s.text)}</span>`);
+    const info = avail?.[sid];
     const lk = Object.entries(info?.libkey || {});
     if(lk.length){
       const list = lk.map(([lib, st]) => `${esc(lib)}(${esc(st)})`).join('、');
       const more = info.reserveurl ? ` <a href="${esc(info.reserveurl)}" target="_blank" rel="noopener">詳細</a>` : '';
-      branches.push(`${esc(sys.label || sys.id)}:${list}${more}`);
+      branches.push(`${esc(sys.label || sid)}:${list}${more}`);
     }
   }
   return `<div class="stamps">${stamps.join('')}</div>` + (branches.length ? `<div class="branches">${branches.join('<br>')}</div>` : '');
 }
 function refreshStamps(isbns){
   for(const isbn of isbns){
-    document.querySelectorAll(`[data-stamps="${CSS.escape(isbn)}"]`).forEach(el => { el.innerHTML = stampsHtml(isbn, false); });
+    document.querySelectorAll(`[data-stamps="${CSS.escape(isbn)}"]`).forEach(el => { el.innerHTML = stampsHtml(isbn); });
   }
 }
 
-/* ---------- 本のカード ---------- */
-const STATUS_LABEL = { want:'読みたい', reading:'読んでる', done:'読んだ' };
+/* =========================================================
+   本のカード
+   ========================================================= */
+const seenBooks = new Map();    // id -> 画面に出した本
 
-function isbn13to10(s){
-  if(!s || s.length !== 13 || !s.startsWith('978')) return null;
-  const core = s.slice(3, 12);
-  let sum = 0;
-  for(let i=0;i<9;i++) sum += (10 - i) * Number(core[i]);
-  const c = (11 - sum % 11) % 11;
-  return core + (c === 10 ? 'X' : String(c));
-}
-/* 書影は複数の提供元を順に試す(見つからなければ次へ) */
 function coverCandidates(b){
   const c = [];
   if(b.isbn){
@@ -449,36 +816,85 @@ document.addEventListener('error', e => { if(isCover(e.target)) nextCover(e.targ
 /* 画像が無いときに1px画像を返す提供元があるので、小さすぎる画像も「無し」扱い */
 document.addEventListener('load', e => { if(isCover(e.target) && e.target.naturalWidth < 20) nextCover(e.target); }, true);
 
-function bookHtml(b, mode, pending){
-  if(b.isbn) seenBooks.set(b.isbn, b);
-  const meta = [b.authors?.join('、'), b.publisher, b.year].filter(Boolean).map(esc).join(' / ');
-  const title = b.link ? `<a href="${esc(b.link)}" target="_blank" rel="noopener">${esc(b.title)}</a>` : esc(b.title);
-  let actions = '';
-  if(!b.isbn){
-    actions = `<span class="meta">ISBNがないため蔵書を自動で確認できません</span>`;
-  } else if(mode === 'shelf'){
-    const sb = state.books[b.isbn];
-    const opts = Object.entries(STATUS_LABEL).map(([v,l]) => `<option value="${v}"${sb.status===v?' selected':''}>${l}</option>`).join('');
-    const checked = sb.availAt ? `<span class="meta" style="margin:0">確認 ${new Date(sb.availAt).toLocaleDateString('ja-JP')}</span>` : '';
-    actions = `<select data-action="status" data-isbn="${b.isbn}" aria-label="読書の状態">${opts}</select>
-      <button class="btn" data-action="recheck" data-isbn="${b.isbn}">蔵書を確認</button>
-      <button class="btn" data-action="similar" data-isbn="${b.isbn}">似た本</button>
-      <button class="btn" data-action="remove" data-isbn="${b.isbn}">外す</button> ${checked}
-      <textarea class="memo" data-action="memo" data-isbn="${b.isbn}" placeholder="メモ(どこで知ったか、なぜ読みたいか など)">${esc(sb.memo || '')}</textarea>`;
-  } else {
-    const inShelf = !!state.books[b.isbn];
-    actions = `<button class="btn ${inShelf?'':'primary'}" data-action="add" data-isbn="${b.isbn}"${inShelf?' disabled':''}>${inShelf?'本棚にあります':'本棚に入れる'}</button>
-      <button class="btn" data-action="similar" data-isbn="${b.isbn}">似た本</button>`;
-  }
-  return `<li class="book">${coverHtml(b)}<div>
-    <p class="title">${title}</p>
-    <p class="meta">${meta || '&nbsp;'}</p>
-    ${b.isbn ? `<div data-stamps="${b.isbn}">${stampsHtml(b.isbn, pending)}</div>` : ''}
-    <div class="actions">${actions}</div></div></li>`;
+function metaOf(b){ return [b.authors?.join('、'), b.publisher, b.year].filter(Boolean).map(esc).join(' / '); }
+function starsText(n){ return '★'.repeat(n) + '☆'.repeat(5 - n); }
+function recLine(r){
+  const parts = [`<span class="st st-${r.status}">${STATUS_LABEL[r.status]}</span>`];
+  if(r.rating) parts.push(`<span class="stars" role="img" aria-label="評価${r.rating}">${starsText(r.rating)}</span>`);
+  let d = '';
+  if(r.status === 'done' && r.endDate) d = r.startDate ? `${fmtDate(r.startDate)} 〜 ${fmtDate(r.endDate)}` : `${fmtDate(r.endDate)} 読了`;
+  else if(r.status !== 'want' && r.startDate) d = `${fmtDate(r.startDate)} から`;
+  if(d) parts.push(`<span>${d}</span>`);
+  for(const t of r.tags || []) parts.push(`<span class="tag">${esc(t)}</span>`);
+  return `<div class="rec">${parts.join('')}</div>`;
 }
+function statusOptions(cur){
+  return Object.entries(STATUS_LABEL).map(([v,l]) => `<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');
+}
+function bookHtml(b, mode){
+  const id = b.id || bookId(b);
+  if(mode !== 'shelf') seenBooks.set(id, b);
+  const rec = state.books[id];
+  const title = b.link ? `<a href="${esc(b.link)}" target="_blank" rel="noopener">${esc(b.title)}</a>` : esc(b.title);
+  const eid = esc(id);
+  let body = '';
+  if(mode === 'shelf'){
+    body += recLine(rec);
+    if(rec.isbn && rec.status !== 'done') body += `<div data-stamps="${esc(rec.isbn)}" data-maxage="${SHELF_FRESH}">${stampsHtml(rec.isbn)}</div>`;
+    if(rec.memo) body += `<p class="memo-ex">${esc(rec.memo)}</p>`;
+    const at = rec.isbn && rec.status !== 'done' && availStore[rec.isbn]?.at ? `<span class="meta" style="margin:0">確認 ${new Date(availStore[rec.isbn].at).toLocaleDateString('ja-JP')}</span>` : '';
+    body += `<div class="actions">
+      <select data-action="status" data-id="${eid}" aria-label="読書の状態">${statusOptions(rec.status)}</select>
+      <button class="btn" data-action="edit" data-id="${eid}">記録を編集</button>
+      ${rec.isbn && rec.status !== 'done' ? `<button class="btn" data-action="recheck" data-id="${eid}">蔵書を確認</button>` : ''}
+      ${rec.isbn ? `<button class="btn" data-action="similar" data-id="${eid}">似た本</button>` : ''} ${at}</div>`;
+  } else {
+    if(b.isbn) body += `<div data-stamps="${esc(b.isbn)}" data-maxage="${SEARCH_FRESH}">${stampsHtml(b.isbn)}</div>`;
+    else body += `<p class="meta">ISBNがないため蔵書は自動で確認できません</p>`;
+    body += `<div class="actions">${addBtnHtml(id)}${b.isbn ? `<button class="btn" data-action="similar" data-id="${eid}">似た本</button>` : ''}</div>`;
+  }
+  return `<li class="book" data-card="${eid}">${coverHtml(b)}<div>
+    <p class="title">${title}</p>
+    <p class="meta">${metaOf(b) || '&nbsp;'}</p>
+    ${body}</div></li>`;
+}
+function addBtnHtml(id){
+  return state.books[id]
+    ? `<button class="btn" data-action="edit" data-id="${esc(id)}">本棚にあります(記録を編集)</button>`
+    : `<button class="btn primary" data-action="add" data-id="${esc(id)}">本棚に入れる</button>`;
+}
+function newRecord(b, extra = {}){
+  const now = Date.now();
+  return {
+    id: bookId(b), isbn: b.isbn || null,
+    title: b.title || '', authors: b.authors || [], publisher: b.publisher || '', year: b.year || '',
+    ndc: b.ndc || '', cover: b.cover || '', link: b.link || '',
+    status: 'want', tags: [], rating: 0, startDate: '', endDate: '', memo: '',
+    addedAt: now, updatedAt: now, ...extra
+  };
+}
+/* 状態を変えたとき、日付が空なら今日を入れる */
+function applyStatus(r, status){
+  r.status = status;
+  if(status === 'reading' && !r.startDate) r.startDate = today();
+  if(status === 'done' && !r.endDate) r.endDate = today();
+}
+function allTags(){
+  const m = new Map();
+  for(const b of Object.values(state.books)) for(const t of b.tags || []) m.set(t, (m.get(t) || 0) + 1);
+  return m;
+}
+function fillTagList(){
+  $('#tag-list').innerHTML = [...allTags().keys()].sort(byJa).map(t => `<option value="${esc(t)}">`).join('');
+}
+function splitTags(s){ return [...new Set(String(s || '').split(/[,、，]/).map(t => t.trim().slice(0, 24)).filter(Boolean))]; }
 
-/* ---------- 探す ---------- */
+/* =========================================================
+   探す
+   取れた検索元から順に画面に出す(遅い国会図書館を待たない)
+   ========================================================= */
 let searchSeq = 0;
+const searchCache = new Map();
 function readQuery(){
   const v = id => $(id).value.trim();
   const yr = id => v(id).normalize('NFKC').replace(/\D/g,'').slice(0,4);
@@ -486,146 +902,477 @@ function readQuery(){
 }
 $('#adv-clear').addEventListener('click', () => { ['#f-title','#f-creator','#f-publisher','#f-from','#f-until'].forEach(id => $(id).value = ''); });
 
-$('#search-form').addEventListener('submit', async e => {
-  e.preventDefault();
+function buildJobs(f){
+  const onlyAny = !f.title && !f.creator && !f.publisher && !f.from && !f.until;
+  const isbn = onlyAny ? toIsbn13(f.any) : null;
+  const fields = {};
+  for(const k of ['title','creator','publisher','from','until']) if(f[k]) fields[k] = f[k];
+  const gq = isbn ? 'isbn:' + isbn : [f.any, f.title && 'intitle:' + quote(f.title), f.creator && 'inauthor:' + quote(f.creator), f.publisher && 'inpublisher:' + quote(f.publisher)].filter(Boolean).join(' ');
+  const jobs = [];
+  if(isbn) jobs.push({ src:'ndl', run: () => searchNdl({ isbn, cnt: 10 }) });
+  else if(f.any){ if(!f.title) jobs.push({ src:'ndl', run: () => searchNdlBooks({ ...fields, title: f.any, cnt: 40 }) }); }
+  else jobs.push({ src:'ndl', run: () => searchNdlBooks({ ...fields, cnt: 50 }) });
+  if(gq) jobs.push({ src:'google', run: () => searchGoogle(gq) });
+  if(!isbn && f.any) jobs.push({ src:'ndl', run: () => searchNdlBooks({ ...fields, any: f.any, cnt: 30 }) });
+  return jobs;
+}
+
+$('#search-form').addEventListener('submit', e => { e.preventDefault(); runSearch(); });
+async function runSearch(){
   const f = readQuery();
   const status = $('#search-status');
   if(!Object.values(f).some(Boolean)){ status.textContent = 'フリーワードか、どれか一つの項目を入れてください。'; return; }
   const my = ++searchSeq;
-  status.textContent = '検索しています…';
+  const key = JSON.stringify(f);
   $('#search-results').innerHTML = ''; $('#noisbn-box').hidden = true;
 
-  const onlyAny = !f.title && !f.creator && !f.publisher && !f.from && !f.until;
-  const isbn = onlyAny ? toIsbn13(f.any) : null;
+  const hit = searchCache.get(key);
+  if(hit && Date.now() - hit.at < 10 * 60e3){ renderSearch(f, hit.parts, hit.failed, true); return; }
 
-  // 国会図書館への問い合わせ
-  const fields = {};
-  for(const k of ['title','creator','publisher','from','until']) if(f[k]) fields[k] = f[k];
-  const ndlCalls = [];
-  if(isbn){
-    ndlCalls.push(searchNdl({ isbn, cnt: 20 }));
-  } else if(f.any){
-    if(!f.title) ndlCalls.push(searchNdlBooks({ ...fields, title: f.any, cnt: 100 }));  // フリーワードを書名として
-    ndlCalls.push(searchNdlBooks({ ...fields, any: f.any, cnt: 50 }));                 // フリーワードを全項目で
-  } else {
-    ndlCalls.push(searchNdlBooks({ ...fields, cnt: 100 }));
-  }
+  status.textContent = '検索しています…';
+  const jobs = buildJobs(f);
+  const parts = jobs.map(() => null), errs = jobs.map(() => false);
+  const failedList = () => {
+    const out = [];
+    const ndl = jobs.map((j,k) => j.src === 'ndl' ? k : -1).filter(k => k >= 0);
+    if(ndl.length && ndl.every(k => errs[k])) out.push('NDLサーチ');
+    if(jobs.some((j,k) => j.src === 'google' && errs[k])) out.push('Google Books');
+    return out;
+  };
+  await Promise.all(jobs.map((job, i) => job.run()
+    .then(r => { parts[i] = r; }, err => { parts[i] = []; errs[i] = true; console.warn(job.src, err); })
+    .then(() => { if(my === searchSeq) renderSearch(f, parts, failedList(), parts.every(p => p !== null)); })
+  ));
+  if(my === searchSeq && errs.some(e => !e)) searchCache.set(key, { parts, failed: failedList(), at: Date.now() });
+}
 
-  // Google Booksへの問い合わせ
-  const quote = x => `"${x.replace(/"/g,'')}"`;
-  const gq = isbn ? 'isbn:' + isbn : [f.any, f.title && 'intitle:' + quote(f.title), f.creator && 'inauthor:' + quote(f.creator), f.publisher && 'inpublisher:' + quote(f.publisher)].filter(Boolean).join(' ');
-  const googleCall = gq ? searchGoogle(gq) : Promise.resolve([]);
-
-  const results = await Promise.allSettled([ ...ndlCalls, googleCall ]);
-  if(my !== searchSeq) return;
-  const ndlRes = results.slice(0, -1), gRes = results[results.length - 1];
-  const failed = [];
-  if(ndlRes.every(r => r.status === 'rejected')){ failed.push('NDLサーチ'); console.warn(ndlRes[0].reason); }
-  if(gRes.status === 'rejected'){ failed.push('Google Books'); console.warn(gRes.reason); }
-  const ndlLists = ndlRes.map(r => r.value || []);
-  const merged = mergeBooks([ ndlLists[0] || [], gRes.value || [], ...ndlLists.slice(1) ]);
-
-  // 出版年で絞る(年が分からない本は残す)
+function renderSearch(f, parts, failed, done){
+  const status = $('#search-status');
+  const merged = mergeBooks(parts.map(p => p || []));
   const inYears = b => !b.year || ((!f.from || b.year >= f.from) && (!f.until || b.year <= f.until));
   const key = f.title || f.any;
-  const score = b => titleScore(b.title, key)
-    + (f.creator && (b.authors || []).some(a => norm(a).includes(norm(f.creator))) ? 1 : 0);
+  const score = b => titleScore(b.title, key) + (f.creator && (b.authors || []).some(a => norm(a).includes(norm(f.creator))) ? 1 : 0);
   const withIsbn = merged.withIsbn.filter(inYears).map((b,i) => ({b,i}))
     .sort((x,y) => score(y.b) - score(x.b) || x.i - y.i).map(x => x.b);
   const noIsbn = merged.noIsbn.filter(inYears);
 
-  let failNote = failed.length ? `(${failed.join('・')}に接続できなかったため、残りの結果だけ表示しています)` : '';
-  if(failed.includes('Google Books') && !state.settings.gbkey) failNote += ' Google Booksは、設定でAPIキーを入れると安定します。';
+  let failNote = done && failed.length ? `(${failed.join('・')}に接続できなかったため、残りの結果だけ表示しています)` : '';
+  if(done && failed.includes('Google Books') && !state.settings.gbkey) failNote += ' Google Booksは、設定でAPIキーを入れると安定します。';
 
-  if(!withIsbn.length && !noIsbn.length){ status.textContent = '見つかりませんでした。言葉や項目を変えて試してください。' + failNote; return; }
-  const canCheck = !!state.settings.appkey;
-  $('#search-results').innerHTML = withIsbn.map(b => bookHtml(b, 'search', canCheck)).join('');
+  if(!withIsbn.length && !noIsbn.length){
+    status.textContent = done ? '見つかりませんでした。言葉や項目を変えて試してください。' + failNote : '検索しています…';
+    $('#search-results').innerHTML = ''; $('#noisbn-box').hidden = true;
+    return;
+  }
+  $('#search-results').innerHTML = withIsbn.map(b => bookHtml(b, 'search')).join('');
   if(noIsbn.length){
     $('#noisbn-box').hidden = false;
     $('#noisbn-box summary').textContent = `ISBNのない本 ${noIsbn.length}件(古い本など)`;
-    $('#noisbn-list').innerHTML = noIsbn.map(b => bookHtml(b, 'search', false)).join('');
-  }
-  status.textContent = `${withIsbn.length}件。` + (canCheck ? '蔵書を確認しています…' : '') + failNote;
-  if(!canCheck || !withIsbn.length) return;
-  try{
-    await checkAvailability(withIsbn.map(b => b.isbn), refreshStamps);
-    if(my === searchSeq) status.textContent = `${withIsbn.length}件。蔵書の確認が終わりました。` + failNote;
-  }catch(err){
-    if(my === searchSeq) status.textContent = err.message;
-    refreshStamps(withIsbn.map(b => b.isbn));
-  }
-});
+    $('#noisbn-list').innerHTML = noIsbn.map(b => bookHtml(b, 'search')).join('');
+  } else $('#noisbn-box').hidden = true;
+  status.textContent = `${withIsbn.length}件` + (done ? '。' : '(ほかの検索元の結果を待っています…)') + failNote;
+  observeStamps($('#search-results'));
+}
 
-/* ---------- 本棚 ---------- */
+/* =========================================================
+   本棚
+   ========================================================= */
 let shelfFilter = 'all';
-function renderShelf(){
+function shelfVisible(){
   const q = $('#shelf-q').value.trim().toLowerCase();
+  const tag = $('#shelf-tag').value;
+  const sort = $('#shelf-sort').value;
   const list = Object.values(state.books)
     .filter(b => shelfFilter === 'all' || b.status === shelfFilter)
-    .filter(b => !q || [b.title, ...(b.authors||[]), b.publisher, b.memo].join(' ').toLowerCase().includes(q))
-    .sort((a,b) => (b.addedAt||0) - (a.addedAt||0));
-  const total = Object.keys(state.books).length;
-  $('#shelf-list').innerHTML = list.length ? list.map(b => bookHtml(b, 'shelf', false)).join('')
-    : `<li class="empty">${total ? '条件に合う本はありません。' : '本棚はまだ空です。「探す」で見つけた本を入れてください。'}</li>`;
+    .filter(b => !tag || (tag === 'none' ? !(b.tags || []).length : (b.tags || []).includes(tag.slice(2))))
+    .filter(b => !q || [b.title, ...(b.authors || []), b.publisher, b.memo, ...(b.tags || [])].join(' ').toLowerCase().includes(q));
+  const cmp = {
+    added:    (a,b) => (b.addedAt || 0) - (a.addedAt || 0),
+    updated:  (a,b) => (b.updatedAt || 0) - (a.updatedAt || 0),
+    finished: (a,b) => (b.endDate || '').localeCompare(a.endDate || '') || (b.addedAt || 0) - (a.addedAt || 0),
+    rating:   (a,b) => (b.rating || 0) - (a.rating || 0) || (b.endDate || '').localeCompare(a.endDate || ''),
+    title:    (a,b) => byJa(a.title, b.title)
+  }[sort] || (() => 0);
+  return list.sort(cmp);
 }
-document.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => {
+function renderTagFilter(){
+  const sel = $('#shelf-tag'); const cur = sel.value;
+  const tags = [...allTags()].sort((a,b) => b[1] - a[1] || byJa(a[0], b[0]));
+  sel.innerHTML = `<option value="">すべてのタグ</option>` + tags.map(([t,n]) => `<option value="t:${esc(t)}">${esc(t)}(${n})</option>`).join('') + `<option value="none">タグなし</option>`;
+  sel.value = [...sel.options].some(o => o.value === cur) ? cur : '';
+}
+function renderShelf(){
+  renderTagFilter();
+  const list = shelfVisible();
+  const total = Object.keys(state.books).length;
+  $('#shelf-count').textContent = total ? `${list.length}冊(全${total}冊)` : '';
+  $('#shelf-list').innerHTML = list.length ? list.map(b => bookHtml(b, 'shelf')).join('')
+    : `<li class="empty">${total ? '条件に合う本はありません。' : '本棚はまだ空です。「探す」で見つけた本を入れるか、「一括登録」で読んできた本をまとめて入れてください。'}</li>`;
+  observeStamps($('#shelf-list'));
+}
+$$('[data-filter]').forEach(btn => btn.addEventListener('click', () => {
   shelfFilter = btn.dataset.filter;
-  document.querySelectorAll('[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  $$('[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
   renderShelf();
 }));
 $('#shelf-q').addEventListener('input', renderShelf);
+$('#shelf-tag').addEventListener('change', renderShelf);
+$('#shelf-sort').addEventListener('change', renderShelf);
+$('#recheck-all').addEventListener('click', () => {
+  if(!state.settings.appkey){ $('#shelf-status').textContent = '設定でカーリルのアプリケーションキーを入力してください。'; return; }
+  const isbns = shelfVisible().filter(b => b.isbn && b.status !== 'done').map(b => b.isbn);
+  if(!isbns.length){ $('#shelf-status').textContent = '確認できる本がありません(読み終えた本とISBNのない本は対象外です)。'; return; }
+  isbns.forEach(i => requestAvail(i, true));
+  $('#shelf-status').textContent = `${isbns.length}冊の蔵書を確認しています。結果は届いた本から順に変わります。`;
+});
 
-async function recheck(isbns, statusEl){
-  isbns.forEach(i => availCache.delete(i));
-  isbns.forEach(i => document.querySelectorAll(`[data-stamps="${i}"]`).forEach(el => el.innerHTML = stampsHtml(i, true)));
-  try{
-    await checkAvailability(isbns, refreshStamps);
-    const now = Date.now();
-    for(const i of isbns) if(state.books[i] && availCache.has(i)){ state.books[i].avail = availCache.get(i); state.books[i].availAt = now; }
-    save();
-    if(statusEl) statusEl.textContent = '蔵書の確認が終わりました。';
-  }catch(err){
-    if(statusEl) statusEl.textContent = err.message; else toast(err.message);
-    refreshStamps(isbns);
-  }
+/* =========================================================
+   記録の編集
+   ========================================================= */
+let editing = null;   // { id, draft }
+function openEdit(id){
+  const b = state.books[id]; if(!b) return;
+  editing = { id, draft: structuredClone(b) };
+  renderEdit();
+  const dlg = $('#edit-dlg');
+  if(!dlg.open) dlg.showModal();
 }
-$('#recheck-all').addEventListener('click', async () => {
-  const isbns = Object.keys(state.books);
-  if(!isbns.length) return;
-  const btn = $('#recheck-all'); btn.disabled = true;
-  $('#shelf-status').textContent = `${isbns.length}冊を確認しています…`;
-  await recheck(isbns, $('#shelf-status'));
-  btn.disabled = false; renderShelf();
-});
-
-/* ---------- カード上の操作(まとめて受ける) ---------- */
-document.addEventListener('click', async e => {
-  const el = e.target.closest('[data-action]'); if(!el || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') return;
-  const isbn = el.dataset.isbn; const action = el.dataset.action;
-  if(action === 'add'){
-    const b = seenBooks.get(isbn); if(!b) return;
-    state.books[isbn] = { ...b, status:'want', memo:'', addedAt: Date.now(),
-      avail: availCache.get(isbn) || null, availAt: availCache.has(isbn) ? Date.now() : null };
-    save();
-    document.querySelectorAll(`[data-action="add"][data-isbn="${isbn}"]`).forEach(x => { x.disabled = true; x.textContent = '本棚にあります'; x.classList.remove('primary'); });
-    toast('本棚に入れました');
-  } else if(action === 'remove'){
-    if(!confirm(`「${state.books[isbn]?.title}」を本棚から外しますか？`)) return;
-    delete state.books[isbn]; save(); renderShelf(); toast('本棚から外しました');
-  } else if(action === 'recheck'){
-    el.disabled = true; await recheck([isbn]); renderShelf();
-  } else if(action === 'similar'){
-    openSimilar(state.books[isbn] || seenBooks.get(isbn));
+function renderEdit(){
+  const d = editing.draft;
+  const tags = allTags(); for(const t of d.tags) if(!tags.has(t)) tags.set(t, 0);
+  $('#edit-title').textContent = d.title;
+  $('#edit-body').innerHTML = `
+    <p class="meta" style="margin-top:12px">${metaOf(d) || '&nbsp;'}</p>
+    <div class="ed-grid">
+      <label>状態<select id="ed-status">${statusOptions(d.status)}</select></label>
+      <div class="ed-block" style="margin:0">評価
+        <div class="starpick" role="group" aria-label="評価(もう一度押すと消えます)">${[1,2,3,4,5].map(n => `<button type="button" data-star="${n}" aria-pressed="${d.rating >= n}" aria-label="${n}">★</button>`).join('')}</div>
+      </div>
+      <label>読み始めた日<input type="date" id="ed-start" value="${esc(d.startDate)}"></label>
+      <label>読み終えた日<input type="date" id="ed-end" value="${esc(d.endDate)}"></label>
+    </div>
+    <div class="ed-block">タグ
+      <div class="tagpick">${[...tags.keys()].sort(byJa).map(t => `<button type="button" class="chip" data-tag="${esc(t)}" aria-pressed="${d.tags.includes(t)}">${esc(t)}</button>`).join('') || '<span class="meta" style="margin:0">まだタグはありません</span>'}</div>
+      <div class="searchbar"><input type="text" id="ed-newtag" placeholder="新しいタグ" aria-label="新しいタグ"><button type="button" class="btn" id="ed-addtag">追加</button></div>
+    </div>
+    <label class="ed-block">メモ・感想<textarea id="ed-memo" rows="6">${esc(d.memo)}</textarea></label>
+    <div class="actions" style="justify-content:space-between">
+      <button type="button" class="btn" id="ed-remove">本棚から外す</button>
+      <button type="button" class="btn primary" id="ed-save">保存する</button>
+    </div>`;
+}
+function addDraftTags(){
+  const input = $('#ed-newtag');
+  const add = splitTags(input.value);
+  if(!add.length) return;
+  for(const t of add) if(!editing.draft.tags.includes(t)) editing.draft.tags.push(t);
+  renderEdit();
+  $('#ed-newtag').focus();
+}
+$('#edit-body').addEventListener('click', e => {
+  if(!editing) return;
+  const d = editing.draft;
+  const star = e.target.closest('[data-star]');
+  if(star){
+    const n = Number(star.dataset.star);
+    d.rating = d.rating === n ? 0 : n;
+    $$('#edit-body [data-star]').forEach(b => b.setAttribute('aria-pressed', String(d.rating >= Number(b.dataset.star))));
+    return;
+  }
+  const tagBtn = e.target.closest('[data-tag]');
+  if(tagBtn){
+    const t = tagBtn.dataset.tag;
+    d.tags = d.tags.includes(t) ? d.tags.filter(x => x !== t) : [...d.tags, t];
+    tagBtn.setAttribute('aria-pressed', String(d.tags.includes(t)));
+    return;
+  }
+  if(e.target.id === 'ed-addtag') addDraftTags();
+  if(e.target.id === 'ed-save'){
+    const cur = state.books[editing.id];
+    if(cur){
+      for(const k of ['status','rating','startDate','endDate','tags','memo']) cur[k] = d[k];
+      cur.updatedAt = Date.now();
+      commit(); toast('記録を保存しました');
+    }
+    $('#edit-dlg').close();
+  }
+  if(e.target.id === 'ed-remove'){
+    if(!confirm(`「${d.title}」を本棚から外しますか？ 記録(評価・メモなど)も消えます。`)) return;
+    delete state.books[editing.id];
+    state.deleted[editing.id] = Date.now();
+    commit(); toast('本棚から外しました');
+    $('#edit-dlg').close();
   }
 });
-document.addEventListener('change', e => {
-  const el = e.target; const isbn = el.dataset?.isbn;
-  if(!isbn || !state.books[isbn]) return;
-  if(el.dataset.action === 'status'){ state.books[isbn].status = el.value; save(); if(shelfFilter !== 'all') renderShelf(); }
-  if(el.dataset.action === 'memo'){ state.books[isbn].memo = el.value; save(); toast('メモを保存しました'); }
+$('#edit-body').addEventListener('keydown', e => {
+  if(e.target.id === 'ed-newtag' && e.key === 'Enter' && !e.isComposing){ e.preventDefault(); addDraftTags(); }
 });
+$('#edit-body').addEventListener('input', e => {
+  if(!editing) return;
+  const d = editing.draft;
+  if(e.target.id === 'ed-memo') d.memo = e.target.value;
+  if(e.target.id === 'ed-start') d.startDate = e.target.value;
+  if(e.target.id === 'ed-end') d.endDate = e.target.value;
+});
+$('#edit-body').addEventListener('change', e => {
+  if(!editing || e.target.id !== 'ed-status') return;
+  applyStatus(editing.draft, e.target.value);
+  $('#ed-start').value = editing.draft.startDate;
+  $('#ed-end').value = editing.draft.endDate;
+});
+$('#edit-close').addEventListener('click', () => $('#edit-dlg').close());
+$('#edit-dlg').addEventListener('close', () => { editing = null; rerenderCurrent(); });
 
-/* ---------- 似た本 ---------- */
+/* =========================================================
+   記録(年ごとの読了)
+   ========================================================= */
+let logYear = '';
+const SPINE_COLORS = ['#2F4A6D','#7A2E2A','#3D5A40','#8A6A1F','#4F4A63','#56636E','#6D3B52','#2E5E63'];
+function spineHtml(b){
+  const h = parseInt(hash(b.id), 36);
+  const height = 100 + (h % 47);
+  const color = SPINE_COLORS[(h >>> 5) % SPINE_COLORS.length];
+  const label = b.title + (b.endDate ? `(${fmtDate(b.endDate)} 読了)` : '');
+  return `<button class="spine" data-action="edit" data-id="${esc(b.id)}" style="height:${height}px;background:${color}" title="${esc(label)}" aria-label="${esc(label)}"><span>${esc(b.title)}</span></button>`;
+}
+function renderLog(){
+  const all = Object.values(state.books);
+  const done = all.filter(b => b.status === 'done');
+  const undated = done.filter(b => !b.endDate);
+  const thisYear = String(new Date().getFullYear());
+  const years = new Set(done.filter(b => b.endDate).map(b => b.endDate.slice(0,4)));
+  years.add(thisYear);
+  if(!logYear || (logYear === 'none' ? !undated.length : !years.has(logYear))) logYear = thisYear;
+  $('#log-year').innerHTML = [...years].sort().reverse().map(y => `<option value="${y}"${y === logYear ? ' selected' : ''}>${y}年</option>`).join('')
+    + (undated.length ? `<option value="none"${logYear === 'none' ? ' selected' : ''}>読了日なし</option>` : '');
+
+  const list = logYear === 'none'
+    ? undated.sort((a,b) => byJa(a.title, b.title))
+    : done.filter(b => b.endDate.startsWith(logYear)).sort((a,b) => a.endDate.localeCompare(b.endDate));
+  const reading = all.filter(b => b.status === 'reading').length;
+  const want = all.filter(b => b.status === 'want').length;
+
+  let html = logYear === 'none'
+    ? `<p class="year-line">読了日を記録していない本が<strong>${list.length}</strong>冊あります。</p>`
+    : `<p class="year-line">${logYear}年に読み終えた本は<strong>${list.length}</strong>冊です。</p>`;
+  html += `<p class="meta">いま読んでいる本 ${reading}冊 / 読みたい本 ${want}冊</p>`;
+  if(!list.length){
+    html += `<p class="empty">この年に読み終えた本はまだありません。本棚で状態を「読んだ」にすると、読み終えた日の順にここへ並びます。</p>`;
+  } else {
+    html += '<div class="shelf-grid">';
+    let lastM = '';
+    for(const b of list){
+      const m = logYear === 'none' ? '' : String(Number(b.endDate.slice(5,7)));
+      if(m && m !== lastM){ html += `<span class="divider" aria-hidden="true">${m}月</span>`; lastM = m; }
+      html += spineHtml(b);
+    }
+    html += '</div><p class="meta">背表紙を押すと、その本の記録を開きます。</p>';
+    const tc = new Map();
+    for(const b of list) for(const t of b.tags || []) tc.set(t, (tc.get(t) || 0) + 1);
+    if(tc.size){
+      const max = Math.max(...tc.values());
+      html += '<h3>タグごとの冊数</h3>' + [...tc].sort((a,b) => b[1] - a[1] || byJa(a[0], b[0])).map(([t,n]) =>
+        `<div class="tagrow"><span>${esc(t)}</span><span><span class="tagbar" style="width:${n / max * 100}%"></span></span><span>${n}冊</span></div>`).join('');
+    }
+    const rated = list.filter(b => b.rating);
+    if(rated.length){
+      html += '<h3>評価の高かった本</h3><ul class="books">' + rated.sort((a,b) => b.rating - a.rating).slice(0, 5)
+        .map(b => `<li class="book" style="grid-template-columns:1fr;padding:10px 0"><div><p class="title" style="font-size:15px">${esc(b.title)}</p>${recLine(b)}</div></li>`).join('') + '</ul>';
+    }
+  }
+  $('#log-body').innerHTML = html;
+}
+$('#log-year').addEventListener('change', e => { logYear = e.target.value; renderLog(); });
+
+/* =========================================================
+   一括登録
+   ========================================================= */
+let bulkRows = [], bulkSeq = 0;
+$('#bulk-st').innerHTML = statusOptions('done');
+
+function parseLine(line){
+  let raw = String(line).trim().replace(/^(?:[-*・●]\s*|\d+[.)．]\s+)/, '');
+  if(!raw) return null;
+  const n = raw.normalize('NFKC');
+  const compact = n.replace(/[\s\-‐−]/g, '');
+  const m13 = compact.match(/97[89]\d{10}/);
+  if(m13) return { raw, isbn: m13[0] };
+  if(/^\d{9}[\dX]$/i.test(compact)) return { raw, isbn: toIsbn13(compact) };
+  const parts = n.split(/\t|\/|,/).map(s => s.trim().replace(/^"|"$/g, '').trim()).filter(Boolean);
+  if(!parts.length) return null;
+  return { raw, title: parts[0], author: parts[1] || '' };
+}
+async function lookupLine(p){
+  if(p.isbn){
+    const [n, g] = await Promise.allSettled([ searchNdl({ isbn: p.isbn, cnt: 5 }, 12000), searchGoogle('isbn:' + p.isbn, 5) ]);
+    const m = mergeBooks([n.value || [], g.value || []]).withIsbn;
+    const exact = m.filter(b => b.isbn === p.isbn);
+    return { cands: exact.length ? exact : m.slice(0, 3), strong: exact.length > 0 };
+  }
+  const params = { title: p.title, cnt: 20 };   // 著者は表記ゆれが大きいので、絞り込みではなく並べ替えに使う
+  const gq = 'intitle:' + quote(p.title) + (p.author ? ' inauthor:' + quote(p.author) : '');
+  const [n, g] = await Promise.allSettled([ searchNdlBooks(params), searchGoogle(gq, 10) ]);
+  const authorHit = b => p.author && (b.authors || []).some(a => norm(a).includes(norm(p.author)) || norm(p.author).includes(norm(a)));
+  const score = b => titleScore(b.title, p.title) * 2 + (authorHit(b) ? 2 : 0);
+  const m = mergeBooks([n.value || [], g.value || []]).withIsbn.map((b,i) => ({b,i}))
+    .sort((x,y) => score(y.b) - score(x.b) || x.i - y.i).map(x => x.b);
+  return { cands: m.slice(0, 6), strong: m.length > 0 && titleScore(m[0].title, p.title) > 0 };
+}
+function candOf(row){ return row.choice.startsWith('c') ? row.cands[Number(row.choice.slice(1))] : null; }
+function bulkRowHtml(row, i){
+  const p = row.p;
+  if(row.state !== 'done'){
+    return `<li class="book" data-bulkrow="${i}"><div class="cover blank" aria-hidden="true">…</div><div>
+      <p class="title" style="font-size:15px">${esc(p.title || p.isbn)}</p><p class="meta">照合しています…</p></div></li>`;
+  }
+  const cand = candOf(row);
+  const shown = cand || { title: p.title || p.isbn, authors: p.author ? [p.author] : [], isbn: null };
+  const opts = row.cands.map((b,k) => {
+    const inShelf = state.books[bookId(b)] ? '(本棚にあります)' : '';
+    const label = [b.title, b.authors?.join('、'), b.publisher, b.year].filter(Boolean).join(' / ');
+    return `<option value="c${k}"${row.choice === 'c' + k ? ' selected' : ''}>${esc(label.slice(0, 80))}${inShelf}</option>`;
+  });
+  if(p.title) opts.push(`<option value="manual"${row.choice === 'manual' ? ' selected' : ''}>書名だけで登録する(候補を使わない)</option>`);
+  opts.push(`<option value="skip"${row.choice === 'skip' ? ' selected' : ''}>登録しない</option>`);
+  let note = '';
+  if(!row.cands.length) note = p.isbn ? 'このISBNの本は見つかりませんでした。' : '候補が見つかりませんでした。';
+  else if(cand && state.books[bookId(cand)]) note = 'この本はもう本棚にあるため、入れません。';
+  else if(!row.strong) note = '書名が一致する候補がありませんでした。合っているか確かめてください。';
+  return `<li class="book" data-bulkrow="${i}">${row.choice === 'skip' ? '<div class="cover blank" aria-hidden="true">–</div>' : coverHtml(shown)}<div>
+    <p class="title" style="font-size:15px">${row.choice === 'skip' ? '<span class="meta">登録しない</span>' : esc(shown.title)}</p>
+    <p class="meta">${row.choice === 'skip' ? '' : metaOf(shown)}${row.choice === 'manual' ? '(ISBNなし・蔵書の確認はできません)' : ''}</p>
+    <p class="meta" style="margin:0">入力:${esc(p.raw)}${note ? ' — ' + note : ''}</p>
+    <select class="bulk-pick" data-bulk="${i}" aria-label="登録する本">${opts.join('')}</select></div></li>`;
+}
+function updateBulkRow(i){
+  const li = document.querySelector(`[data-bulkrow="${i}"]`);
+  if(li) li.outerHTML = bulkRowHtml(bulkRows[i], i);
+}
+function bulkTargets(){
+  const out = []; const seen = new Set();
+  for(const row of bulkRows){
+    if(row.state !== 'done' || row.choice === 'skip') continue;
+    const cand = candOf(row);
+    const b = cand || { isbn: null, title: row.p.title, authors: row.p.author ? [row.p.author] : [] };
+    const id = bookId(b);
+    if(state.books[id] || seen.has(id)) continue;
+    seen.add(id); out.push(b);
+  }
+  return out;
+}
+function updateBulkCount(){
+  const n = bulkTargets().length;
+  $('#bulk-save').textContent = `${n}冊を本棚に入れる`;
+  $('#bulk-save').disabled = !n;
+}
+$('#bulk-match').addEventListener('click', async () => {
+  const seen = new Set();
+  const lines = $('#bulk-text').value.split('\n').map(parseLine).filter(Boolean)
+    .filter(p => { const k = p.isbn || norm(p.title) + '|' + norm(p.author); if(seen.has(k)) return false; seen.add(k); return true; });
+  const status = $('#bulk-status');
+  if(!lines.length){ status.textContent = '1行に1冊ずつ、ISBNか書名を書いてください。'; return; }
+  if(lines.length > 300){ status.textContent = `一度に照合できるのは300行までです(いま${lines.length}行)。分けて照合してください。`; return; }
+  const my = ++bulkSeq;
+  bulkRows = lines.map(p => ({ p, state:'wait', cands:[], strong:false, choice:'skip' }));
+  $('#bulk-list').innerHTML = bulkRows.map(bulkRowHtml).join('');
+  $('#bulk-commit').hidden = true;
+  let count = 0;
+  status.textContent = `0 / ${lines.length} 件を照合しました…`;
+  await pool(bulkRows, 3, async (row, i) => {
+    try{ Object.assign(row, await lookupLine(row.p)); }catch(e){ console.warn(e); }
+    if(my !== bulkSeq) return;
+    row.state = 'done';
+    const first = row.cands[0];
+    row.choice = first && row.strong ? (state.books[bookId(first)] ? 'skip' : 'c0') : (row.p.title ? 'manual' : 'skip');
+    updateBulkRow(i);
+    status.textContent = `${++count} / ${lines.length} 件を照合しました…`;
+  });
+  if(my !== bulkSeq) return;
+  status.textContent = '照合が終わりました。候補が違う本は選び直してから、下のボタンで本棚に入れてください。';
+  fillTagList();
+  $('#bulk-commit').hidden = false;
+  updateBulkCount();
+});
+$('#bulk-list').addEventListener('change', e => {
+  const i = e.target.dataset.bulk; if(i === undefined) return;
+  bulkRows[i].choice = e.target.value;
+  updateBulkRow(Number(i));
+  updateBulkCount();
+});
+$('#bulk-save').addEventListener('click', () => {
+  const targets = bulkTargets();
+  if(!targets.length) return;
+  const status = $('#bulk-st').value;
+  const end = $('#bulk-end').value;
+  const tags = splitTags($('#bulk-tags').value);
+  const now = Date.now();
+  targets.forEach((b, k) => {
+    const rec = newRecord(b, { status, tags: [...tags], endDate: status === 'done' ? end : '', addedAt: now - k, updatedAt: now });
+    state.books[rec.id] = rec;
+    delete state.deleted[rec.id];
+  });
+  commit();
+  toast(`${targets.length}冊を本棚に入れました`);
+  resetBulk(`${targets.length}冊を本棚に入れました。続けて別の本を入れられます。`);
+  $('#bulk-text').value = '';
+});
+$('#bulk-clear').addEventListener('click', () => resetBulk(''));
+function resetBulk(msg){
+  ++bulkSeq; bulkRows = [];
+  $('#bulk-list').innerHTML = ''; $('#bulk-commit').hidden = true;
+  $('#bulk-status').textContent = msg;
+}
+
+/* バーコード読み取り(必要になったときだけ部品を読み込む) */
+let scanner = null; const scanned = new Set();
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = src;
+    s.onload = res; s.onerror = () => rej(new Error('読み取り用の部品を読み込めませんでした'));
+    document.head.appendChild(s);
+  });
+}
+$('#scan-start').addEventListener('click', async () => {
+  if(scanner) return;
+  const st = $('#scan-status');
+  if(!window.isSecureContext){ toast('カメラは https で開いたページでしか使えません'); return; }
+  $('#scanner-box').hidden = false;
+  st.textContent = 'カメラを準備しています…';
+  try{
+    if(!window.__Html5QrcodeLibrary__) await loadScript('https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js');
+    const lib = window.__Html5QrcodeLibrary__;
+    scanner = new lib.Html5Qrcode('scanner', {
+      formatsToSupport: [lib.Html5QrcodeSupportedFormats.EAN_13], verbose: false,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+    });
+    await scanner.start({ facingMode: 'environment' },
+      { fps: 10, qrbox: (w, h) => ({ width: Math.max(60, Math.floor(Math.min(w * 0.9, 340))), height: Math.max(60, Math.floor(Math.min(h * 0.4, 150))) }) },
+      onScan, () => {});
+    st.textContent = '本の裏の、978 か 979 で始まるバーコードをかざしてください。';
+  }catch(err){
+    st.textContent = 'カメラを使えませんでした: ' + (err?.message || err);
+    scanner = null;
+  }
+});
+function onScan(text){
+  const code = String(text).replace(/\D/g, '');
+  if(!/^97[89]\d{10}$/.test(code) || scanned.has(code)) return;
+  scanned.add(code);
+  const ta = $('#bulk-text');
+  if(!ta.value.includes(code)) ta.value = (ta.value.trim() ? ta.value.replace(/\s*$/, '\n') : '') + code;
+  navigator.vibrate?.(60);
+  const inShelf = state.books[code] ? '(この本はもう本棚にあります)' : '';
+  $('#scan-status').textContent = `${scanned.size}冊読み取りました。最後:${code}${inShelf}`;
+}
+async function stopScan(){
+  if(scanner){ try{ await scanner.stop(); scanner.clear(); }catch(e){} scanner = null; }
+  $('#scanner-box').hidden = true;
+}
+$('#scan-stop').addEventListener('click', stopScan);
+
+/* =========================================================
+   似た本
+   ========================================================= */
 async function openSimilar(book){
   if(!book) return;
   const dlg = $('#similar-dlg'); const body = $('#similar-body');
@@ -636,7 +1383,8 @@ async function openSimilar(book){
   let ndc = book.ndc;
   if(!ndc && book.isbn){
     try{ ndc = (await searchNdl({ isbn: book.isbn, cnt: 5 })).find(x => x.ndc)?.ndc || ''; }catch(e){}
-    if(ndc && state.books[book.isbn]){ state.books[book.isbn].ndc = ndc; save(); }
+    const rec = state.books[bookId(book)];
+    if(ndc && rec && !rec.ndc){ rec.ndc = ndc; saveLocal(); }
   }
   const author = book.authors?.[0] || '';
   const exclude = new Set([book.isbn]);
@@ -646,45 +1394,136 @@ async function openSimilar(book){
     return out;
   };
   const [byAuthorNdl, byAuthorG, byNdc] = await Promise.allSettled([
-    author ? searchNdlBooks({ creator: author, cnt: 50 }) : Promise.resolve([]),
-    author ? searchGoogle('inauthor:"' + author + '"') : Promise.resolve([]),
-    ndc ? searchNdlBooks({ ndc, cnt: 80 }) : Promise.resolve([])
+    author ? searchNdlBooks({ creator: author, cnt: 30 }) : Promise.resolve([]),
+    author ? searchGoogle('inauthor:' + quote(author)) : Promise.resolve([]),
+    ndc ? searchNdlBooks({ ndc, cnt: 40 }) : Promise.resolve([])
   ]);
-  const sameAuthor = pick([...(byAuthorNdl.value||[]), ...(byAuthorG.value||[])], 12);
+  if(!dlg.open) return;
+  const sameAuthor = pick([...(byAuthorNdl.value || []), ...(byAuthorG.value || [])], 12);
   const sameNdc = pick(byNdc.value || [], 15);
-  const canCheck = !!state.settings.appkey;
   let html = '';
-  if(author) html += `<h3>${esc(author)}の他の本</h3>` + (sameAuthor.length ? `<ul class="books">${sameAuthor.map(b => bookHtml(b,'search',canCheck)).join('')}</ul>` : '<p class="meta">見つかりませんでした。</p>');
-  if(ndc) html += `<h3>同じ分類の本(NDC ${esc(ndc)})</h3>` + (sameNdc.length ? `<ul class="books">${sameNdc.map(b => bookHtml(b,'search',canCheck)).join('')}</ul>` : '<p class="meta">見つかりませんでした。</p>');
+  if(author) html += `<h3>${esc(author)}の他の本</h3>` + (sameAuthor.length ? `<ul class="books">${sameAuthor.map(b => bookHtml(b, 'search')).join('')}</ul>` : '<p class="meta">見つかりませんでした。</p>');
+  if(ndc) html += `<h3>同じ分類の本(NDC ${esc(ndc)})</h3>` + (sameNdc.length ? `<ul class="books">${sameNdc.map(b => bookHtml(b, 'search')).join('')}</ul>` : '<p class="meta">見つかりませんでした。</p>');
   else html += '<p class="meta">この本の分類番号が見つからなかったため、分類からは探せませんでした。</p>';
   body.innerHTML = html;
-  const isbns = [...sameAuthor, ...sameNdc].map(b => b.isbn);
-  if(canCheck && isbns.length){ try{ await checkAvailability(isbns, refreshStamps); }catch(err){ toast(err.message); refreshStamps(isbns); } }
+  observeStamps(body);
 }
 $('#similar-close').addEventListener('click', () => $('#similar-dlg').close());
-$('#similar-dlg').addEventListener('close', () => { if(!$('#view-shelf').hidden) renderShelf(); });
+$('#similar-dlg').addEventListener('close', () => rerenderCurrent());
 
-/* ---------- 設定 ---------- */
+/* =========================================================
+   カード上の操作(まとめて受ける)
+   ========================================================= */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if(!el || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') return;
+  const id = el.dataset.id; const action = el.dataset.action;
+  if(action === 'add'){
+    const b = seenBooks.get(id); if(!b) return;
+    const rec = newRecord(b, { status: 'want' });
+    state.books[rec.id] = rec; delete state.deleted[rec.id];
+    commit();
+    document.querySelectorAll(`[data-action="add"][data-id="${CSS.escape(id)}"]`).forEach(x => { x.outerHTML = addBtnHtml(id); });
+    toast('「読みたい」で本棚に入れました');
+  } else if(action === 'edit'){
+    openEdit(id);
+  } else if(action === 'recheck'){
+    const isbn = state.books[id]?.isbn;
+    if(!state.settings.appkey){ toast('設定でカーリルのアプリケーションキーを入力してください'); return; }
+    if(isbn) requestAvail(isbn, true);
+  } else if(action === 'similar'){
+    openSimilar(state.books[id] || seenBooks.get(id));
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(el.dataset?.action !== 'status') return;
+  const rec = state.books[el.dataset.id]; if(!rec) return;
+  applyStatus(rec, el.value);
+  rec.updatedAt = Date.now();
+  commit();
+  renderShelf();
+  toast(`「${STATUS_LABEL[rec.status]}」にしました`);
+});
+
+/* =========================================================
+   設定
+   ========================================================= */
 function renderSettings(){
   $('#appkey').value = state.settings.appkey;
   $('#gbkey').value = state.settings.gbkey || '';
+  $('#gh-token').value = state.settings.sync.token || '';
   $('#systems').innerHTML = state.settings.systems.map((s,i) => `<div class="sysrow">
     <input type="text" data-sys="${i}" data-field="label" value="${esc(s.label)}" aria-label="表示名">
     <input type="text" data-sys="${i}" data-field="id" value="${esc(s.id)}" aria-label="システムID">
     <button class="btn" data-sysdel="${i}">削除</button></div>`).join('');
   $('#key-notice').hidden = !!state.settings.appkey;
+  renderSyncInfo();
+  renderTagAdmin();
 }
-$('#appkey').addEventListener('change', e => { state.settings.appkey = e.target.value.trim(); save(); renderSettings(); toast('キーを保存しました'); });
-$('#gbkey').addEventListener('change', e => { state.settings.gbkey = e.target.value.trim(); save(); toast('キーを保存しました'); });
+function renderSyncInfo(){
+  const s = state.settings.sync;
+  const on = !!s.token;
+  $('#sync-connect').hidden = on; $('#sync-now').hidden = !on; $('#sync-off').hidden = !on;
+  let t = on ? 'この端末は同期しています。' : 'この端末は同期していません。';
+  if(on && s.lastSync) t += `最後に同期したのは ${new Date(s.lastSync).toLocaleString('ja-JP')} です。`;
+  if(on && s.error) t += ` 直近の同期でエラー:${s.error}`;
+  $('#sync-info').textContent = t;
+}
+function renderTagAdmin(){
+  const tags = [...allTags()].sort((a,b) => b[1] - a[1] || byJa(a[0], b[0]));
+  $('#tag-admin').innerHTML = tags.length
+    ? tags.map(([t,n]) => `<div class="libresult"><div><strong>${esc(t)}</strong> <span class="meta">${n}冊</span></div>
+        <div class="actions"><button class="btn" data-tagrename="${esc(t)}">名前を変える</button><button class="btn" data-tagdel="${esc(t)}">消す</button></div></div>`).join('')
+    : '<p class="help">まだタグはありません。本棚の「記録を編集」や一括登録で付けられます。</p>';
+}
+$('#tag-admin').addEventListener('click', e => {
+  const ren = e.target.dataset.tagrename, del = e.target.dataset.tagdel;
+  const now = Date.now();
+  if(ren !== undefined){
+    const to = (prompt('新しいタグ名', ren) || '').trim().slice(0, 24);
+    if(!to || to === ren) return;
+    for(const b of Object.values(state.books)) if(b.tags?.includes(ren)){ b.tags = [...new Set(b.tags.map(t => t === ren ? to : t))]; b.updatedAt = now; }
+    commit(); renderTagAdmin(); toast('タグの名前を変えました');
+  }
+  if(del !== undefined){
+    if(!confirm(`タグ「${del}」を全部の本から消しますか？(本そのものは消えません)`)) return;
+    for(const b of Object.values(state.books)) if(b.tags?.includes(del)){ b.tags = b.tags.filter(t => t !== del); b.updatedAt = now; }
+    commit(); renderTagAdmin(); toast('タグを消しました');
+  }
+});
+
+$('#sync-connect').addEventListener('click', async () => {
+  const token = $('#gh-token').value.trim();
+  if(!token){ $('#sync-info').textContent = 'トークンを貼ってから押してください。'; return; }
+  state.settings.sync = { token, gistId: '', lastSync: 0, error: '' };
+  saveLocal(); renderSyncInfo();
+  $('#sync-info').textContent = '同期しています…';
+  await Sync.run();
+  renderSyncInfo();
+  if(!state.settings.sync.error) toast('同期を始めました');
+});
+$('#sync-now').addEventListener('click', () => Sync.run());
+$('#sync-off').addEventListener('click', () => {
+  if(!confirm('この端末の同期をやめますか？(この端末の本棚はそのまま残ります)')) return;
+  clearTimeout(Sync.timer); Sync.timer = null;
+  state.settings.sync = { ...DEFAULT_STATE.settings.sync };
+  saveLocal(); setBadge('ok'); renderSettings();
+});
+$('#sync-badge').addEventListener('click', () => showTab('settings'));
+
+$('#appkey').addEventListener('change', e => { state.settings.appkey = e.target.value.trim(); saveLocal(); renderSettings(); toast('キーを保存しました'); });
+$('#gbkey').addEventListener('change', e => { state.settings.gbkey = e.target.value.trim(); saveLocal(); toast('キーを保存しました'); });
+function systemsChanged(){ state.settings.systemsAt = Date.now(); commit(); }
 $('#systems').addEventListener('change', e => {
   const i = e.target.dataset.sys; if(i === undefined) return;
-  state.settings.systems[i][e.target.dataset.field] = e.target.value.trim(); save(); availCache.clear();
+  state.settings.systems[i][e.target.dataset.field] = e.target.value.trim(); systemsChanged();
 });
 $('#systems').addEventListener('click', e => {
   const i = e.target.dataset.sysdel; if(i === undefined) return;
-  state.settings.systems.splice(Number(i), 1); save(); renderSettings();
+  state.settings.systems.splice(Number(i), 1); systemsChanged(); renderSettings();
 });
-$('#add-system').addEventListener('click', () => { state.settings.systems.push({ id:'', label:'' }); save(); renderSettings(); });
+$('#add-system').addEventListener('click', () => { state.settings.systems.push({ id:'', label:'' }); saveLocal(); renderSettings(); });
 
 $('#lib-lookup').addEventListener('click', async () => {
   const out = $('#lib-results');
@@ -699,7 +1538,7 @@ $('#lib-lookup').addEventListener('click', async () => {
       systems.get(l.systemid).libs.push(l.short || l.formal);
     }
     if(!systems.size){ out.innerHTML = '<p class="status">見つかりませんでした。都道府県名と市区町村名を確かめてください。</p>'; return; }
-    out.innerHTML = [...systems].map(([id, s]) => `<div class="libresult"><div><strong>${esc(s.name)}</strong>(${esc(id)})<br><span class="meta">${esc(s.libs.slice(0,6).join('、'))}${s.libs.length>6?' ほか':''}</span></div>
+    out.innerHTML = [...systems].map(([id, s]) => `<div class="libresult"><div><strong>${esc(s.name)}</strong>(${esc(id)})<br><span class="meta">${esc(s.libs.slice(0,6).join('、'))}${s.libs.length > 6 ? ' ほか' : ''}</span></div>
       <button class="btn" data-useid="${esc(id)}" data-usename="${esc(s.name)}">これを使う</button></div>`).join('');
   }catch(err){ out.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
 });
@@ -707,40 +1546,72 @@ $('#lib-results').addEventListener('click', e => {
   const id = e.target.dataset.useid; if(!id) return;
   if(state.settings.systems.some(s => s.id === id)){ toast('もう登録されています'); return; }
   const label = prompt('表示名(短く)', e.target.dataset.usename.replace(/[市町村区]?立?図書館$/,'')) || id;
-  state.settings.systems.push({ id, label }); save(); availCache.clear(); renderSettings(); toast('図書館を追加しました');
+  state.settings.systems.push({ id, label }); systemsChanged(); renderSettings(); toast('図書館を追加しました');
 });
 
 $('#export').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ books: state.books, settings: { systems: state.settings.systems } }, null, 2)], { type:'application/json' });
+  const blob = new Blob([JSON.stringify({ v: 2, books: state.books, settings: { systems: state.settings.systems } }, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `hondana-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `hondana-${today()}.json`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
 $('#import').addEventListener('change', async e => {
   const file = e.target.files[0]; if(!file) return;
   try{
     const data = JSON.parse(await file.text());
-    const n = Object.keys(data.books || {}).length;
-    if(!confirm(`${n}冊を読み込みます。よろしいですか？`)) return;
-    Object.assign(state.books, data.books || {});
-    if(Array.isArray(data.settings?.systems) && data.settings.systems.length) state.settings.systems = data.settings.systems;
-    save(); renderSettings(); toast(`${n}冊を読み込みました`);
+    const entries = Object.entries(data.books || {});
+    if(!confirm(`${entries.length}冊を読み込みます。よろしいですか？`)) return;
+    const now = Date.now();
+    for(const [k, b] of entries){
+      const rec = migrateBook(b, k);
+      rec.updatedAt = now;
+      state.books[rec.id] = rec; delete state.deleted[rec.id];
+      if(b.avail && rec.isbn && !availStore[rec.isbn]) availStore[rec.isbn] = { info: b.avail, at: b.availAt || 0 };
+    }
+    if(Array.isArray(data.settings?.systems) && data.settings.systems.length){ state.settings.systems = data.settings.systems; state.settings.systemsAt = now; }
+    commit(); saveAvail(); renderSettings(); toast(`${entries.length}冊を読み込みました`);
   }catch(err){ toast('読み込めませんでした: ' + err.message); }
   e.target.value = '';
 });
 
-/* ---------- タブ ---------- */
+/* =========================================================
+   タブ
+   ========================================================= */
+let currentTab = 'search';
 function showTab(name){
-  document.querySelectorAll('nav [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
-  for(const v of ['search','shelf','settings']) $('#view-' + v).hidden = v !== name;
-  if(name === 'shelf') renderShelf();
-  if(name === 'settings') renderSettings();
+  if(currentTab === 'bulk' && name !== 'bulk') stopScan();
+  currentTab = name;
+  $$('nav [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  for(const v of ['search','shelf','log','bulk','settings']) $('#view-' + v).hidden = v !== name;
+  if(name === 'settings') renderSettings(); else rerenderCurrent();
 }
-document.querySelectorAll('nav [data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+function rerenderCurrent(){
+  if(editing) return;   // 編集中は描き直さない(閉じたときに描き直す)
+  if(currentTab === 'shelf') renderShelf();
+  if(currentTab === 'log') renderLog();
+  if(currentTab === 'bulk') fillTagList();
+  if(currentTab === 'settings'){ renderSyncInfo(); renderTagAdmin(); }
+  if(currentTab === 'search'){
+    $$('#view-search [data-action="add"], #view-search [data-action="edit"]').forEach(x => { x.outerHTML = addBtnHtml(x.dataset.id); });
+  }
+}
+$$('nav [data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 document.addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if(g) showTab(g.dataset.goto); });
 
+/* =========================================================
+   起動
+   ========================================================= */
+saveLocal();          // 前の版から引き継いだデータをこの版の形で保存
 renderSettings();
+setBadge('ok');
+if(Sync.on) Sync.run();
+document.addEventListener('visibilitychange', () => {
+  if(!Sync.on) return;
+  if(document.visibilityState === 'visible' && Date.now() - (state.settings.sync.lastSync || 0) > 20000) Sync.run();
+  if(document.visibilityState === 'hidden' && Sync.timer) Sync.run();   // 閉じる前に、待っている変更を送る
+});
+window.addEventListener('online', () => Sync.run());
 </script>
 </body>
 </html>
