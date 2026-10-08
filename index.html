@@ -245,6 +245,7 @@ footer a{color:inherit}
     <label for="gh-token">端末間の同期(GitHubのトークン)</label>
     <input id="gh-token" type="password" style="width:100%" autocomplete="off" placeholder="ghp_…">
     <p class="help"><a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=hondana" target="_blank" rel="noopener">GitHubのトークン作成ページ</a>で「gist」だけにチェックを入れて発行したトークン(classic)を貼ってください。本棚の中身はあなたのGitHubの非公開Gist(URLを知らない人には見えない場所)に置かれ、同じトークンを入れた端末どうしで揃います。トークンとAPIキーはこの端末にだけ保存され、同期はされません。</p>
+    <p class="help">同じブラウザの別のタブ・ウィンドウには、変更がその場で反映されます(トークンも共通なので、入れるのは1つのタブだけで構いません)。別の端末には、ページを開いているあいだ30秒ほどで反映されます。</p>
     <div class="actions" style="margin-top:8px">
       <button id="sync-connect" class="btn primary">同期を始める</button>
       <button id="sync-now" class="btn">今すぐ同期</button>
@@ -335,6 +336,7 @@ const DEFAULT_STATE = {
 };
 const SEARCH_FRESH = 30 * 60e3;      // 探す画面の蔵書情報は30分使い回す
 const SHELF_FRESH  = 12 * 3600e3;    // 本棚の蔵書情報は12時間使い回す
+const PULL_EVERY   = 30e3;           // 開いているあいだ、別の端末の変更をこの間隔で取り込む
 
 /* =========================================================
    小物
@@ -440,7 +442,14 @@ function loadState(){
 }
 let state = loadState();
 
+/* 保存されている本棚(同じブラウザの別タブが書いたものかもしれない)を、この画面の本棚に混ぜる */
+function mergeStored(s){
+  if(!s) return;
+  applyMerge({ books: s.books, deleted: s.deleted, systems: s.settings?.systems, systemsAt: s.settings?.systemsAt });
+}
 function saveLocal(){
+  /* 別のタブが先に書いた変更を消してしまわないよう、混ぜてから書く */
+  try{ mergeStored(JSON.parse(localStorage.getItem(STORE_KEY) || 'null')); }catch(e){ console.warn(e); }
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
   catch(e){ toast('保存できませんでした: ' + e.message); }
 }
@@ -466,6 +475,7 @@ function saveAvail(){
    ========================================================= */
 const GIST_FILE = 'hondana.json';
 const GIST_DESC = '本棚アプリの同期データ (hondana-sync)';
+const GIST_DESC_MERGED = '本棚アプリの同期データ(別のGistに統合済み・削除して構いません)';
 
 function payload(){
   return { v: 2, books: state.books, deleted: state.deleted, systems: state.settings.systems, systemsAt: state.settings.systemsAt || 0 };
@@ -495,7 +505,7 @@ function applyMerge(r){
 }
 
 const Sync = {
-  timer: null, running: false, again: false,
+  timer: null, running: false, again: false, listedAt: 0,
   get on(){ return !!state.settings.sync.token; },
   schedule(ms = 2500){
     if(!this.on) return;
@@ -514,9 +524,13 @@ const Sync = {
     if(!res.ok){ const e = new Error('GitHubがエラーを返しました(' + res.status + ')'); e.status = res.status; throw e; }
     return res.json();
   },
-  async findGist(){
+  /* 同期用のGistを、古い順に全部返す(同時に同期を始めると、重複して作られることがあるため) */
+  async findGists(){
     const list = await this.api('/gists?per_page=100');
-    return list.find(g => g.description === GIST_DESC && g.files?.[GIST_FILE])?.id || '';
+    this.listedAt = Date.now();
+    return list.filter(g => g.description === GIST_DESC && g.files?.[GIST_FILE])
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || String(a.id).localeCompare(String(b.id)))
+      .map(g => g.id);
   },
   async readGist(id){
     const g = await this.api('/gists/' + id);
@@ -532,13 +546,22 @@ const Sync = {
     this.running = true; clearTimeout(this.timer); this.timer = null; setBadge('busy');
     const s = state.settings.sync;
     try{
+      /* 同期用のGistが複数あったら、一番古いものに寄せる(ほかの中身も混ぜてから) */
+      const extra = new Set();
+      if(!s.gistId || Date.now() - this.listedAt > 10 * 60e3){
+        const ids = await this.findGists();
+        if(ids.length){
+          ids.slice(1).forEach(id => extra.add(id));
+          if(s.gistId && s.gistId !== ids[0]) extra.add(s.gistId);
+          s.gistId = ids[0];
+        }
+      }
       let remote = null;
-      if(!s.gistId) s.gistId = await this.findGist();
       if(s.gistId){
         try{ remote = await this.readGist(s.gistId); }
         catch(e){
           if(e.status !== 404) throw e;
-          s.gistId = await this.findGist();
+          s.gistId = (await this.findGists())[0] || '';
           if(s.gistId) remote = await this.readGist(s.gistId);
         }
       }
@@ -547,10 +570,20 @@ const Sync = {
         s.gistId = g.id; remote = payload();
       }
       const before = signature(payload());
+      const absorbed = [];
+      for(const id of extra){
+        try{ const r = await this.readGist(id); if(r) applyMerge(r); absorbed.push(id); }
+        catch(e){ if(e.status !== 404) console.warn(e); }
+      }
       if(remote) applyMerge(remote);
       const mine = payload();
       if(!remote || signature(mine) !== signature(remote)){
         await this.api('/gists/' + s.gistId, { method: 'PATCH', body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(mine) } } }) });
+      }
+      /* 混ぜ終えた重複Gistは、説明文を変えて同期の対象から外す(消しはしない) */
+      for(const id of absorbed){
+        try{ await this.api('/gists/' + id, { method: 'PATCH', body: JSON.stringify({ description: GIST_DESC_MERGED }) }); }
+        catch(e){ console.warn(e); }
       }
       s.lastSync = Date.now(); s.error = '';
       saveLocal();
@@ -574,6 +607,10 @@ function setBadge(kind, msg){
   const t = state.settings.sync.lastSync ? new Date(state.settings.sync.lastSync).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }) : '';
   el.textContent = kind === 'busy' ? '同期中…' : kind === 'pending' ? '同期待ち' : kind === 'error' ? '同期できません' : (t ? `同期 ${t}` : '同期オン');
   el.title = msg || '';
+}
+function badgeNow(){
+  const s = state.settings.sync;
+  setBadge(Sync.running ? 'busy' : Sync.timer ? 'pending' : s.error ? 'error' : 'ok', s.error);
 }
 
 /* =========================================================
@@ -1600,6 +1637,35 @@ $$('nav [data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.da
 document.addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if(g) showTab(g.dataset.goto); });
 
 /* =========================================================
+   同じブラウザの別タブ・別ウィンドウとの連携
+   どれかのタブが保存すると、ほかのタブにここで知らせが届く
+   ========================================================= */
+window.addEventListener('storage', e => {
+  if(e.storageArea !== localStorage || !e.newValue) return;
+  if(e.key === STORE_KEY){
+    let s; try{ s = JSON.parse(e.newValue); }catch(err){ return; }
+    mergeStored(s);
+    /* トークンやキーもタブ間で共通にする(1つのタブで入れれば全部のタブで使える) */
+    const inc = s.settings || {};
+    if(typeof inc.appkey === 'string') state.settings.appkey = inc.appkey;
+    if(typeof inc.gbkey === 'string') state.settings.gbkey = inc.gbkey;
+    const wasOn = Sync.on;
+    if(inc.sync) Object.assign(state.settings.sync, inc.sync);
+    if(wasOn && !Sync.on){ clearTimeout(Sync.timer); Sync.timer = null; }
+    badgeNow();
+    $('#key-notice').hidden = !!state.settings.appkey;
+    if(currentTab === 'settings' && !$('#view-settings').contains(document.activeElement)) renderSettings();
+    else rerenderCurrent();
+  }
+  if(e.key === AVAIL_KEY){
+    try{
+      const inc = JSON.parse(e.newValue) || {};
+      for(const [k, v] of Object.entries(inc)) if(!availStore[k] || (v.at || 0) > (availStore[k].at || 0)) availStore[k] = v;
+    }catch(err){}
+  }
+});
+
+/* =========================================================
    起動
    ========================================================= */
 saveLocal();          // 前の版から引き継いだデータをこの版の形で保存
@@ -1608,9 +1674,14 @@ setBadge('ok');
 if(Sync.on) Sync.run();
 document.addEventListener('visibilitychange', () => {
   if(!Sync.on) return;
-  if(document.visibilityState === 'visible' && Date.now() - (state.settings.sync.lastSync || 0) > 20000) Sync.run();
+  if(document.visibilityState === 'visible' && Date.now() - (state.settings.sync.lastSync || 0) > 5000) Sync.run();
   if(document.visibilityState === 'hidden' && Sync.timer) Sync.run();   // 閉じる前に、待っている変更を送る
 });
+/* 開いているあいだは、別の端末の変更をときどき取り込む */
+setInterval(() => {
+  if(!Sync.on || document.visibilityState !== 'visible' || Sync.running || Sync.timer) return;
+  if(Date.now() - (state.settings.sync.lastSync || 0) > PULL_EVERY) Sync.run();
+}, 10e3);
 window.addEventListener('online', () => Sync.run());
 </script>
 </body>
